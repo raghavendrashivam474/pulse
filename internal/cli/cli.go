@@ -2,11 +2,14 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"pulse/internal/config"
 	pulseErrors "pulse/internal/errors"
 	"pulse/internal/output"
+	"pulse/internal/project"
+	"pulse/internal/scanner"
 )
 
 // ExitSuccess is the process exit code for a successful run.
@@ -53,6 +56,8 @@ func ParseArgs(args []string) (*Args, error) {
 
 // Run is the main entry point for the Pulse CLI.
 // It returns a process exit code.
+//
+// Pipeline: Config -> Target -> Root -> Scan -> Detect -> Output
 func Run(args []string) int {
 	w := output.Default()
 
@@ -78,16 +83,74 @@ func Run(args []string) int {
 		return ExitFailure
 	}
 
+	// M2.1 — Validate the target path.
+	target, err := project.ResolveTarget(cfg.TargetPath)
+	if err != nil {
+		w.PrintError(err.Error())
+		return ExitFailure
+	}
+
+	// M2.2 — Discover the project root.
+	rootResult := project.DiscoverRoot(target)
+
+	// M2.3 — Scan the filesystem from the discovered root.
+	inv, scanErr := scanner.Scan(rootResult.Root)
+	if scanErr != nil {
+		w.PrintError(fmt.Sprintf("filesystem scan failed: %s", scanErr.Error()))
+		return ExitFailure
+	}
+
+	// M2.4 — Detect the project type.
+	detection := project.DetectType(inv)
+
 	if cfg.JSON {
-		if err := w.PrintJSON(); err != nil {
-			w.PrintError("failed to produce JSON output: " + err.Error())
-			return ExitFailure
-		}
+		printJSONDiscovery(w, rootResult, inv, detection)
 		return ExitSuccess
 	}
 
-	w.PrintSummary()
+	printDiscovery(w, rootResult, inv, detection)
 	return ExitSuccess
+}
+
+// printDiscovery renders the S2 discovery result as human-readable text.
+// M2.8 will own the polished output format; this is the functional pipeline result.
+func printDiscovery(w *output.Writer, root project.RootDiscovery, inv scanner.Inventory, d project.Detection) {
+	fmt.Fprintf(w.Out, "Pulse — Project Discovery\n\n")
+
+	fmt.Fprintf(w.Out, "Project\n")
+	fmt.Fprintf(w.Out, "  Root:   %s\n", root.Root)
+	fmt.Fprintf(w.Out, "  Type:   %s\n", string(d.Primary))
+
+	if !root.MarkerFound {
+		fmt.Fprintf(w.Out, "  Note:   no project root marker found; using target as root\n")
+	}
+
+	if len(d.AllDetected) > 1 {
+		fmt.Fprintf(w.Out, "  Also:   ")
+		for i, t := range d.AllDetected[1:] {
+			if i > 0 {
+				fmt.Fprintf(w.Out, ", ")
+			}
+			fmt.Fprintf(w.Out, "%s", string(t))
+		}
+		fmt.Fprintf(w.Out, "\n")
+	}
+
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "Filesystem\n")
+	fmt.Fprintf(w.Out, "  Files:       %d\n", len(inv.Files))
+	fmt.Fprintf(w.Out, "  Directories: %d\n", len(inv.Dirs))
+}
+
+// printJSONDiscovery renders minimal JSON discovery output.
+// A structured JSON renderer will replace this in M2.8.
+func printJSONDiscovery(w *output.Writer, root project.RootDiscovery, inv scanner.Inventory, d project.Detection) {
+	fmt.Fprintf(w.Out, "{\n")
+	fmt.Fprintf(w.Out, "  \"root\": %q,\n", root.Root)
+	fmt.Fprintf(w.Out, "  \"type\": %q,\n", string(d.Primary))
+	fmt.Fprintf(w.Out, "  \"files\": %d,\n", len(inv.Files))
+	fmt.Fprintf(w.Out, "  \"directories\": %d\n", len(inv.Dirs))
+	fmt.Fprintf(w.Out, "}\n")
 }
 
 // Main is the true application entry point, called from main.go.

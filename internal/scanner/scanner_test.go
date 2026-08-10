@@ -67,7 +67,7 @@ func TestScan_MultipleFileTypes(t *testing.T) {
 	dir := testhelpers.TempProject(t, map[string]string{
 		"main.go":     "package main\n",
 		"README.md":   "# Readme\n",
-		"go.mod":      "module example.com/test\n",
+		"Makefile":    "all:\n\techo done\n",
 		"config.yaml": "key: value\n",
 	})
 
@@ -89,9 +89,9 @@ func TestScan_MultipleFileTypes(t *testing.T) {
 			t.Errorf("expected extension %q in inventory", expected)
 		}
 	}
-	// go.mod has no extension
+	// Makefile has no extension
 	if !extMap[""] {
-		t.Error("expected empty extension for go.mod")
+		t.Error("expected empty extension for Makefile")
 	}
 }
 

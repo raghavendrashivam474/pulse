@@ -1,9 +1,11 @@
 package cli_test
 
 import (
+	"os"
 	"testing"
 
 	"pulse/internal/cli"
+	"pulse/internal/testhelpers"
 )
 
 func TestParseArgs_Empty(t *testing.T) {
@@ -133,15 +135,45 @@ func TestRun_TooManyArgs_ReturnsFailure(t *testing.T) {
 }
 
 func TestRun_WithTargetPath_ReturnsSuccess(t *testing.T) {
-	code := cli.Run([]string{"./some-project"})
+	// Create a real temporary directory so target validation passes.
+	dir := testhelpers.TempProject(t, map[string]string{
+		"README.md": "# Test project\n",
+	})
+
+	// cli.Run uses config.New which resolves relative to cwd.
+	// Pass the absolute temp dir path directly.
+	code := cli.Run([]string{dir})
 	if code != cli.ExitSuccess {
 		t.Errorf("expected ExitSuccess with target path, got %d", code)
 	}
 }
 
 func TestRun_WithJSONAndTargetPath_ReturnsSuccess(t *testing.T) {
-	code := cli.Run([]string{"--json", "./some-project"})
+	dir := testhelpers.TempProject(t, map[string]string{
+		"README.md": "# Test project\n",
+	})
+
+	code := cli.Run([]string{"--json", dir})
 	if code != cli.ExitSuccess {
 		t.Errorf("expected ExitSuccess with --json and target path, got %d", code)
+	}
+}
+
+func TestRun_NonexistentPath_ReturnsFailure(t *testing.T) {
+	code := cli.Run([]string{"./nonexistent-project-dir"})
+	if code != cli.ExitFailure {
+		t.Errorf("expected ExitFailure for nonexistent path, got %d", code)
+	}
+}
+
+func TestRun_FileTarget_ReturnsFailure(t *testing.T) {
+	dir := testhelpers.TempProject(t, map[string]string{
+		"main.go": "package main\n",
+	})
+
+	filePath := dir + string(os.PathSeparator) + "main.go"
+	code := cli.Run([]string{filePath})
+	if code != cli.ExitFailure {
+		t.Errorf("expected ExitFailure for file target, got %d", code)
 	}
 }
