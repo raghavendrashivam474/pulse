@@ -69,3 +69,12 @@ func findRepoRoot() (string, error) {
 		dir = parent
 	}
 }
+
+// AssertEqual fails the test if got != want.
+// Provides a clear diff-style message showing expected and actual values.
+func AssertEqual[T comparable](t *testing.T, want, got T) {
+	t.Helper()
+	if got != want {
+		t.Errorf("AssertEqual:\n  want: %v\n   got: %v", want, got)
+	}
+}
