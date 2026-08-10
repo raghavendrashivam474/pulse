@@ -1,80 +1,96 @@
+// Package cli handles argument parsing and application flow for Pulse.
 package cli
 
 import (
-	"flag"
-	"fmt"
-	"io"
 	"os"
 
-	"github.com/raghavendrashivam474/pulse/internal/output"
+	"pulse/internal/config"
+	pulseErrors "pulse/internal/errors"
+	"pulse/internal/output"
 )
 
-const version = "v1.0.0"
+// ExitSuccess is the process exit code for a successful run.
+const ExitSuccess = 0
 
-// App is the Pulse CLI application.
-type App struct {
-	stdout io.Writer
-	stderr io.Writer
+// ExitFailure is the process exit code for any failure.
+const ExitFailure = 1
+
+// Args holds the parsed command-line arguments.
+type Args struct {
+	Help       bool
+	Version    bool
+	JSON       bool
+	TargetPath string
 }
 
-// New creates a new App with default output streams.
-func New() *App {
-	return &App{
-		stdout: os.Stdout,
-		stderr: os.Stderr,
+// ParseArgs parses os.Args-style input into an Args struct.
+func ParseArgs(args []string) (*Args, error) {
+	parsed := &Args{}
+	positional := 0
+
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--help", "-h":
+			parsed.Help = true
+		case "--version", "-v":
+			parsed.Version = true
+		case "--json":
+			parsed.JSON = true
+		default:
+			if len(args[i]) > 0 && args[i][0] == '-' {
+				return nil, pulseErrors.User("unknown flag: " + args[i])
+			}
+			positional++
+			if positional > 1 {
+				return nil, pulseErrors.User("too many arguments: only one target path is allowed")
+			}
+			parsed.TargetPath = args[i]
+		}
 	}
+
+	return parsed, nil
 }
 
-// Options holds the parsed CLI arguments.
-type Options struct {
-	Path        string
-	JSON        bool
-	ShowVersion bool
-	ShowHelp    bool
+// Run is the main entry point for the Pulse CLI.
+// It returns a process exit code.
+func Run(args []string) int {
+	w := output.Default()
+
+	parsed, err := ParseArgs(args)
+	if err != nil {
+		w.PrintError(err.Error())
+		return ExitFailure
+	}
+
+	if parsed.Help {
+		w.PrintHelp()
+		return ExitSuccess
+	}
+
+	if parsed.Version {
+		w.PrintVersion()
+		return ExitSuccess
+	}
+
+	cfg, err := config.New(parsed.TargetPath, parsed.JSON)
+	if err != nil {
+		w.PrintError("could not resolve target path: " + err.Error())
+		return ExitFailure
+	}
+
+	if cfg.JSON {
+		if err := w.PrintJSON(); err != nil {
+			w.PrintError("failed to produce JSON output: " + err.Error())
+			return ExitFailure
+		}
+		return ExitSuccess
+	}
+
+	w.PrintSummary()
+	return ExitSuccess
 }
 
-// Run parses arguments and executes the appropriate action.
-func (a *App) Run(args []string) error {
-	fs := flag.NewFlagSet("pulse", flag.ContinueOnError)
-	fs.SetOutput(a.stderr)
-
-	var opts Options
-
-	fs.BoolVar(&opts.JSON, "json", false, "Output machine-readable JSON")
-	fs.BoolVar(&opts.ShowVersion, "version", false, "Show version")
-	fs.BoolVar(&opts.ShowHelp, "help", false, "Show help")
-
-	fs.Usage = func() {
-		fmt.Fprintf(a.stdout, "Pulse %s - project intelligence for developers\n\n", version)
-		fmt.Fprintf(a.stdout, "Usage:\n")
-		fmt.Fprintf(a.stdout, "    pulse [path] [options]\n\n")
-		fmt.Fprintf(a.stdout, "Options:\n")
-		fmt.Fprintf(a.stdout, "    --help       Show help\n")
-		fmt.Fprintf(a.stdout, "    --version    Show version\n")
-		fmt.Fprintf(a.stdout, "    --json       Output machine-readable JSON\n")
-	}
-
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-
-	if opts.ShowHelp {
-		fs.Usage()
-		return nil
-	}
-
-	if opts.ShowVersion {
-		fmt.Fprintf(a.stdout, "Pulse %s\n", version)
-		return nil
-	}
-
-	// Capture optional positional path argument.
-	if fs.NArg() > 0 {
-		opts.Path = fs.Arg(0)
-	}
-
-	renderer := output.NewRenderer(a.stdout, opts.JSON)
-	renderer.RenderDefault()
-
-	return nil
+// Main is the true application entry point, called from main.go.
+func Main() {
+	os.Exit(Run(os.Args[1:]))
 }

@@ -1,16 +1,15 @@
 package main
 
-import (
-	"fmt"
-	"os"
+import "pulse/internal/cli"
 
-	"github.com/raghavendrashivam474/pulse/internal/cli"
-)
+// version is set at build time via:
+//
+//	go build -ldflags "-X main.version=1.0.0"
+//
+// During normal development builds it remains the default below.
+var version = "1.0.0"
 
 func main() {
-	app := cli.New()
-	if err := app.Run(os.Args[1:]); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
+	_ = version
+	cli.Main()
 }

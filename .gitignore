@@ -1,23 +1,18 @@
-# Compiled binaries
+﻿# Binaries
 pulse
 pulse.exe
-*.exe
-*.out
+dist/
+
+# Test cache
 *.test
+*.out
 
-# Build output
-/dist/
-
-# Go workspace
-go.work
-go.work.sum
-
-# IDE and editor metadata
+# Editor artifacts
 .vscode/
 .idea/
 *.swp
 *.swo
-*.DS_Store
 
-# OS-specific
+# OS artifacts
+.DS_Store
 Thumbs.db

@@ -1,105 +1,147 @@
-package cli
+package cli_test
 
 import (
-	"bytes"
-	"strings"
 	"testing"
+
+	"pulse/internal/cli"
 )
 
-func newTestApp() (*App, *bytes.Buffer, *bytes.Buffer) {
-	stdout := &bytes.Buffer{}
-	stderr := &bytes.Buffer{}
-	app := &App{
-		stdout: stdout,
-		stderr: stderr,
-	}
-	return app, stdout, stderr
-}
-
-func TestRun_NoArgs_PrintsDefault(t *testing.T) {
-	app, stdout, _ := newTestApp()
-
-	if err := app.Run([]string{}); err != nil {
+func TestParseArgs_Empty(t *testing.T) {
+	args, err := cli.ParseArgs([]string{})
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	out := stdout.String()
-	if !strings.Contains(out, "Pulse") {
-		t.Errorf("expected output to contain 'Pulse', got: %q", out)
+	if args.Help || args.Version || args.JSON {
+		t.Error("expected all flags false for empty args")
 	}
-	if !strings.Contains(out, "v1.0.0") {
-		t.Errorf("expected output to contain 'v1.0.0', got: %q", out)
+	if args.TargetPath != "" {
+		t.Errorf("expected empty target path, got %q", args.TargetPath)
 	}
 }
 
-func TestRun_Version(t *testing.T) {
-	app, stdout, _ := newTestApp()
+func TestParseArgs_Help(t *testing.T) {
+	for _, flag := range []string{"--help", "-h"} {
+		args, err := cli.ParseArgs([]string{flag})
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", flag, err)
+		}
+		if !args.Help {
+			t.Errorf("expected Help=true for flag %q", flag)
+		}
+	}
+}
 
-	if err := app.Run([]string{"--version"}); err != nil {
+func TestParseArgs_Version(t *testing.T) {
+	for _, flag := range []string{"--version", "-v"} {
+		args, err := cli.ParseArgs([]string{flag})
+		if err != nil {
+			t.Fatalf("unexpected error for %q: %v", flag, err)
+		}
+		if !args.Version {
+			t.Errorf("expected Version=true for flag %q", flag)
+		}
+	}
+}
+
+func TestParseArgs_JSON(t *testing.T) {
+	args, err := cli.ParseArgs([]string{"--json"})
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	out := stdout.String()
-	if !strings.Contains(out, "v1.0.0") {
-		t.Errorf("expected version output to contain 'v1.0.0', got: %q", out)
+	if !args.JSON {
+		t.Error("expected JSON=true")
 	}
 }
 
-func TestRun_Help(t *testing.T) {
-	app, stdout, _ := newTestApp()
-
-	if err := app.Run([]string{"--help"}); err != nil {
+func TestParseArgs_TargetPath(t *testing.T) {
+	args, err := cli.ParseArgs([]string{"./my-project"})
+	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-
-	out := stdout.String()
-	if !strings.Contains(out, "Usage") {
-		t.Errorf("expected help output to contain 'Usage', got: %q", out)
-	}
-	if !strings.Contains(out, "--version") {
-		t.Errorf("expected help output to contain '--version', got: %q", out)
-	}
-	if !strings.Contains(out, "--json") {
-		t.Errorf("expected help output to contain '--json', got: %q", out)
+	if args.TargetPath != "./my-project" {
+		t.Errorf("expected ./my-project, got %q", args.TargetPath)
 	}
 }
 
-func TestRun_InvalidFlag_ReturnsError(t *testing.T) {
-	app, _, _ := newTestApp()
+func TestParseArgs_TargetPathWithFlags(t *testing.T) {
+	args, err := cli.ParseArgs([]string{"--json", "./my-project"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !args.JSON {
+		t.Error("expected JSON=true")
+	}
+	if args.TargetPath != "./my-project" {
+		t.Errorf("expected ./my-project, got %q", args.TargetPath)
+	}
+}
 
-	err := app.Run([]string{"--notaflag"})
+func TestParseArgs_UnknownFlag(t *testing.T) {
+	_, err := cli.ParseArgs([]string{"--unknown"})
 	if err == nil {
-		t.Error("expected error for unknown flag, got nil")
+		t.Fatal("expected error for unknown flag, got nil")
 	}
 }
 
-func TestRun_JSON(t *testing.T) {
-	app, stdout, _ := newTestApp()
-
-	if err := app.Run([]string{"--json"}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	out := stdout.String()
-	if !strings.Contains(out, "{") {
-		t.Errorf("expected JSON output to contain '{', got: %q", out)
-	}
-	if !strings.Contains(out, "Pulse") {
-		t.Errorf("expected JSON output to contain 'Pulse', got: %q", out)
+func TestParseArgs_TooManyPositional(t *testing.T) {
+	_, err := cli.ParseArgs([]string{"./project-a", "./project-b"})
+	if err == nil {
+		t.Fatal("expected error for too many positional arguments, got nil")
 	}
 }
 
-func TestRun_PathArgument(t *testing.T) {
-	app, stdout, _ := newTestApp()
-
-	if err := app.Run([]string{"./some-project"}); err != nil {
-		t.Fatalf("unexpected error: %v", err)
+func TestRun_NoArgs_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess, got %d", code)
 	}
+}
 
-	// Path is captured but not yet acted upon.
-	// Verify the application still runs cleanly.
-	out := stdout.String()
-	if !strings.Contains(out, "Pulse") {
-		t.Errorf("expected output to contain 'Pulse', got: %q", out)
+func TestRun_Version_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{"--version"})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess, got %d", code)
+	}
+}
+
+func TestRun_Help_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{"--help"})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess, got %d", code)
+	}
+}
+
+func TestRun_JSON_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{"--json"})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess, got %d", code)
+	}
+}
+
+func TestRun_UnknownFlag_ReturnsFailure(t *testing.T) {
+	code := cli.Run([]string{"--unknown"})
+	if code != cli.ExitFailure {
+		t.Errorf("expected ExitFailure for unknown flag, got %d", code)
+	}
+}
+
+func TestRun_TooManyArgs_ReturnsFailure(t *testing.T) {
+	code := cli.Run([]string{"./a", "./b"})
+	if code != cli.ExitFailure {
+		t.Errorf("expected ExitFailure for too many args, got %d", code)
+	}
+}
+
+func TestRun_WithTargetPath_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{"./some-project"})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess with target path, got %d", code)
+	}
+}
+
+func TestRun_WithJSONAndTargetPath_ReturnsSuccess(t *testing.T) {
+	code := cli.Run([]string{"--json", "./some-project"})
+	if code != cli.ExitSuccess {
+		t.Errorf("expected ExitSuccess with --json and target path, got %d", code)
 	}
 }

@@ -1,3 +1,3 @@
-module github.com/raghavendrashivam474/pulse
+module pulse
 
-go 1.26.5
+go 1.21
