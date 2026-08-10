@@ -1,0 +1,58 @@
+package project
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	pulseErrors "pulse/internal/errors"
+)
+
+// Target represents a validated analysis target.
+// A Target is guaranteed to exist, be accessible, and be a directory.
+type Target struct {
+	// Path is the absolute, cleaned path to the analysis target directory.
+	Path string
+}
+
+// ResolveTarget validates that the given path is suitable for analysis.
+//
+// The path must:
+//   - not be empty
+//   - exist on the filesystem
+//   - be a directory (Pulse analyses projects, not individual files)
+//
+// The path received here should already be absolute and cleaned by Config.
+// ResolveTarget adds the semantic validation layer on top.
+//
+// Returns a classified PulseError on any failure so the caller can render
+// an appropriate message without exposing raw filesystem errors to the user.
+func ResolveTarget(path string) (Target, error) {
+	if path == "" {
+		return Target{}, pulseErrors.User("target path must not be empty")
+	}
+
+	info, statErr := os.Stat(path)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return Target{}, pulseErrors.User(
+				fmt.Sprintf("target path does not exist: %s", path),
+			)
+		}
+		// Path exists but cannot be stat'd — permissions or broken symlink.
+		return Target{}, pulseErrors.Environment(
+			fmt.Sprintf("target path cannot be accessed: %s", path),
+			statErr,
+		)
+	}
+
+	if !info.IsDir() {
+		return Target{}, pulseErrors.User(
+			fmt.Sprintf("target must be a directory, not a file: %s", path),
+		)
+	}
+
+	return Target{
+		Path: filepath.Clean(path),
+	}, nil
+}
