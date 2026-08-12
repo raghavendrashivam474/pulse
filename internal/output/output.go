@@ -50,7 +50,6 @@ func (w *Writer) PrintHelp() {
 }
 
 // PrintSummary writes the standard human-readable Pulse summary to stdout.
-// Used when no target path is provided.
 func (w *Writer) PrintSummary() {
 	fmt.Fprintf(w.Out, "Pulse v%s\n\n", version)
 	fmt.Fprintf(w.Out, "Project intelligence for developers.\n\n")
@@ -65,7 +64,6 @@ type JSONResult struct {
 }
 
 // PrintJSON writes a placeholder JSON result to stdout.
-// Used when no target path is provided.
 func (w *Writer) PrintJSON() error {
 	result := JSONResult{
 		Version: version,
@@ -109,11 +107,46 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 	fmt.Fprintf(w.Out, "Git\n")
 	if !snap.Git.IsRepository {
 		fmt.Fprintf(w.Out, "  Repository: No\n")
-	} else {
-		fmt.Fprintf(w.Out, "  Repository:   %s\n", snap.Git.RepositoryName)
-		fmt.Fprintf(w.Out, "  Branch:       %s\n", snap.Git.Branch)
-		fmt.Fprintf(w.Out, "  Working Tree: %s\n", workingTreeLabel(snap.Git.WorkingTreeState))
+		return
 	}
+
+	fmt.Fprintf(w.Out, "  Repository:   %s\n", snap.Git.RepositoryName)
+	fmt.Fprintf(w.Out, "  Branch:       %s\n", snap.Git.Branch)
+	fmt.Fprintf(w.Out, "  Working Tree: %s\n", workingTreeLabel(snap.Git.WorkingTreeState))
+
+	// History section (M3.5)
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "History\n")
+	if snap.Git.History.Count == 0 {
+		fmt.Fprintf(w.Out, "  Commits: 0\n")
+		fmt.Fprintf(w.Out, "  Latest:  None\n")
+	} else {
+		h := snap.Git.History
+		fmt.Fprintf(w.Out, "  Commits: %d\n", h.Count)
+		fmt.Fprintf(w.Out, "  Latest:  %q\n", h.Latest.Message)
+		fmt.Fprintf(w.Out, "  Author:  %s\n", h.Latest.Author)
+		fmt.Fprintf(w.Out, "  Date:    %s\n", h.Latest.Timestamp.Format("2006-01-02"))
+	}
+
+	// Contributors section (M3.6)
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "Contributors\n")
+	if snap.Git.Contributors.Count == 0 {
+		fmt.Fprintf(w.Out, "  Count: 0\n")
+	} else {
+		fmt.Fprintf(w.Out, "  Count: %d\n", snap.Git.Contributors.Count)
+		for _, c := range snap.Git.Contributors.Items {
+			fmt.Fprintf(w.Out, "  %-30s %d\n", c.Name, c.CommitCount)
+		}
+	}
+
+	// Health section (M3.7)
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "Health\n")
+	fmt.Fprintf(w.Out, "  Commits:      %s\n", yesNo(snap.Git.Health.HasCommits))
+	fmt.Fprintf(w.Out, "  Contributors: %s\n", yesNo(snap.Git.Health.HasContributors))
+	fmt.Fprintf(w.Out, "  Working Tree: %s\n", workingTreeLabel(snap.Git.WorkingTreeState))
+	fmt.Fprintf(w.Out, "  HEAD:         %s\n", headLabel(snap.Git.Health.DetachedHEAD))
 }
 
 // workingTreeLabel converts a WorkingTreeState to a display string.
@@ -127,6 +160,26 @@ func workingTreeLabel(state git.WorkingTreeState) string {
 		return "Unknown"
 	}
 }
+
+// yesNo converts a bool to a human-readable Yes/No string.
+func yesNo(v bool) string {
+	if v {
+		return "Yes"
+	}
+	return "No"
+}
+
+// headLabel converts the detached HEAD bool to a display string.
+func headLabel(detached bool) string {
+	if detached {
+		return "Detached"
+	}
+	return "Branch"
+}
+
+// ---------------------------------------------------------------------------
+// JSON output
+// ---------------------------------------------------------------------------
 
 // JSONDiscoveryResult is the top-level structure for machine-readable
 // project discovery output.
@@ -149,11 +202,48 @@ type JSONProjectSection struct {
 
 // JSONGitSection holds Git-specific fields in the JSON output.
 type JSONGitSection struct {
-	IsRepository   bool   `json:"is_repository"`
-	RepositoryRoot string `json:"repository_root,omitempty"`
-	RepositoryName string `json:"repository_name,omitempty"`
-	Branch         string `json:"branch,omitempty"`
-	WorkingTree    string `json:"working_tree,omitempty"`
+	IsRepository   bool                `json:"is_repository"`
+	RepositoryRoot string              `json:"repository_root,omitempty"`
+	RepositoryName string              `json:"repository_name,omitempty"`
+	Branch         string              `json:"branch,omitempty"`
+	WorkingTree    string              `json:"working_tree,omitempty"`
+	History        *JSONHistorySection `json:"history,omitempty"`
+	Contributors   *JSONContributors   `json:"contributors,omitempty"`
+	Health         *JSONHealthSection  `json:"health,omitempty"`
+}
+
+// JSONHistorySection holds commit history in the JSON output.
+type JSONHistorySection struct {
+	Count  int             `json:"count"`
+	Latest *JSONCommitInfo `json:"latest,omitempty"`
+}
+
+// JSONCommitInfo holds a single commit in the JSON output.
+type JSONCommitInfo struct {
+	Hash      string `json:"hash"`
+	Message   string `json:"message"`
+	Author    string `json:"author"`
+	Timestamp string `json:"timestamp"`
+}
+
+// JSONContributors holds contributor data in the JSON output.
+type JSONContributors struct {
+	Count int                   `json:"count"`
+	Items []JSONContributorItem `json:"items"`
+}
+
+// JSONContributorItem holds one contributor in the JSON output.
+type JSONContributorItem struct {
+	Name        string `json:"name"`
+	CommitCount int    `json:"commit_count"`
+}
+
+// JSONHealthSection holds health signals in the JSON output.
+type JSONHealthSection struct {
+	HasCommits       bool `json:"has_commits"`
+	HasContributors  bool `json:"has_contributors"`
+	WorkingTreeClean bool `json:"working_tree_clean"`
+	DetachedHEAD     bool `json:"detached_head"`
 }
 
 // PrintDiscoveryJSON renders a ProjectSnapshot as JSON to stdout.
@@ -166,11 +256,46 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 	gitSection := JSONGitSection{
 		IsRepository: snap.Git.IsRepository,
 	}
+
 	if snap.Git.IsRepository {
 		gitSection.RepositoryRoot = snap.Git.RepositoryRoot
 		gitSection.RepositoryName = snap.Git.RepositoryName
 		gitSection.Branch = snap.Git.Branch
 		gitSection.WorkingTree = string(snap.Git.WorkingTreeState)
+
+		// History
+		h := snap.Git.History
+		histSection := &JSONHistorySection{Count: h.Count}
+		if h.Count > 0 {
+			histSection.Latest = &JSONCommitInfo{
+				Hash:      h.Latest.Hash,
+				Message:   h.Latest.Message,
+				Author:    h.Latest.Author,
+				Timestamp: h.Latest.Timestamp.Format("2006-01-02T15:04:05Z"),
+			}
+		}
+		gitSection.History = histSection
+
+		// Contributors
+		contribItems := make([]JSONContributorItem, len(snap.Git.Contributors.Items))
+		for i, c := range snap.Git.Contributors.Items {
+			contribItems[i] = JSONContributorItem{
+				Name:        c.Name,
+				CommitCount: c.CommitCount,
+			}
+		}
+		gitSection.Contributors = &JSONContributors{
+			Count: snap.Git.Contributors.Count,
+			Items: contribItems,
+		}
+
+		// Health
+		gitSection.Health = &JSONHealthSection{
+			HasCommits:       snap.Git.Health.HasCommits,
+			HasContributors:  snap.Git.Health.HasContributors,
+			WorkingTreeClean: snap.Git.Health.WorkingTreeClean,
+			DetachedHEAD:     snap.Git.Health.DetachedHEAD,
+		}
 	}
 
 	result := JSONDiscoveryResult{
