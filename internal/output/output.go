@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"pulse/internal/codebase"
 	"pulse/internal/git"
 	"pulse/internal/snapshot"
 )
@@ -103,6 +104,25 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 	fmt.Fprintf(w.Out, "  Files:       %d\n", snap.FileCount)
 	fmt.Fprintf(w.Out, "  Directories: %d\n", snap.DirectoryCount)
 
+	// S4: Packages section
+	pkgNames := codebase.PackageNames(snap.Codebase.Packages)
+	if len(pkgNames) > 0 {
+		fmt.Fprintf(w.Out, "\n")
+		fmt.Fprintf(w.Out, "Packages\n")
+		for _, name := range pkgNames {
+			fmt.Fprintf(w.Out, "  %s\n", name)
+		}
+	}
+
+	// S4: Dependencies section
+	if len(snap.Codebase.Dependencies) > 0 {
+		fmt.Fprintf(w.Out, "\n")
+		fmt.Fprintf(w.Out, "Dependencies\n")
+		for _, dep := range snap.Codebase.Dependencies {
+			fmt.Fprintf(w.Out, "  %-20s → %s\n", dep.From, dep.To)
+		}
+	}
+
 	fmt.Fprintf(w.Out, "\n")
 	fmt.Fprintf(w.Out, "Git\n")
 	if !snap.Git.IsRepository {
@@ -191,13 +211,51 @@ type JSONDiscoveryResult struct {
 
 // JSONProjectSection holds project-specific fields in the JSON output.
 type JSONProjectSection struct {
-	Name           string         `json:"name"`
-	Root           string         `json:"root"`
-	Type           string         `json:"type"`
-	Languages      []string       `json:"languages"`
-	FileCount      int            `json:"file_count"`
-	DirectoryCount int            `json:"directory_count"`
-	Git            JSONGitSection `json:"git"`
+	Name           string              `json:"name"`
+	Root           string              `json:"root"`
+	Type           string              `json:"type"`
+	Languages      []string            `json:"languages"`
+	FileCount      int                 `json:"file_count"`
+	DirectoryCount int                 `json:"directory_count"`
+	Codebase       JSONCodebaseSection `json:"codebase"`
+	Git            JSONGitSection      `json:"git"`
+}
+
+// JSONCodebaseSection holds the structured codebase model in JSON output.
+type JSONCodebaseSection struct {
+	Files        []JSONFileEntry    `json:"files"`
+	Directories  []JSONDirEntry     `json:"directories"`
+	Packages     []JSONPackageEntry `json:"packages"`
+	Dependencies []JSONDependency   `json:"dependencies"`
+}
+
+// JSONFileEntry represents a file in JSON output.
+type JSONFileEntry struct {
+	Path      string `json:"path"`
+	Name      string `json:"name"`
+	Extension string `json:"extension"`
+	Language  string `json:"language,omitempty"`
+}
+
+// JSONDirEntry represents a directory in JSON output.
+type JSONDirEntry struct {
+	Path string `json:"path"`
+	Name string `json:"name"`
+}
+
+// JSONPackageEntry represents a package in JSON output.
+type JSONPackageEntry struct {
+	Name     string   `json:"name"`
+	Path     string   `json:"path"`
+	Language string   `json:"language"`
+	Files    []string `json:"files"`
+}
+
+// JSONDependency represents a dependency in JSON output.
+type JSONDependency struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	Type string `json:"type"`
 }
 
 // JSONGitSection holds Git-specific fields in the JSON output.
@@ -253,6 +311,52 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 		langs[i] = string(l)
 	}
 
+	// Build codebase section.
+	cbFiles := make([]JSONFileEntry, len(snap.Codebase.Files))
+	for i, f := range snap.Codebase.Files {
+		cbFiles[i] = JSONFileEntry{
+			Path:      f.Path,
+			Name:      f.Name,
+			Extension: f.Extension,
+			Language:  string(f.Language),
+		}
+	}
+
+	cbDirs := make([]JSONDirEntry, len(snap.Codebase.Directories))
+	for i, d := range snap.Codebase.Directories {
+		cbDirs[i] = JSONDirEntry{
+			Path: d.Path,
+			Name: d.Name,
+		}
+	}
+
+	cbPkgs := make([]JSONPackageEntry, len(snap.Codebase.Packages))
+	for i, p := range snap.Codebase.Packages {
+		cbPkgs[i] = JSONPackageEntry{
+			Name:     p.Name,
+			Path:     p.Path,
+			Language: string(p.Language),
+			Files:    p.Files,
+		}
+	}
+
+	cbDeps := make([]JSONDependency, len(snap.Codebase.Dependencies))
+	for i, d := range snap.Codebase.Dependencies {
+		cbDeps[i] = JSONDependency{
+			From: d.From,
+			To:   d.To,
+			Type: string(d.Type),
+		}
+	}
+
+	codebaseSection := JSONCodebaseSection{
+		Files:        cbFiles,
+		Directories:  cbDirs,
+		Packages:     cbPkgs,
+		Dependencies: cbDeps,
+	}
+
+	// Build git section.
 	gitSection := JSONGitSection{
 		IsRepository: snap.Git.IsRepository,
 	}
@@ -308,6 +412,7 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 			Languages:      langs,
 			FileCount:      snap.FileCount,
 			DirectoryCount: snap.DirectoryCount,
+			Codebase:       codebaseSection,
 			Git:            gitSection,
 		},
 	}

@@ -9,6 +9,7 @@
 package snapshot
 
 import (
+	"pulse/internal/codebase"
 	"pulse/internal/git"
 	"pulse/internal/project"
 	"pulse/internal/scanner"
@@ -47,6 +48,11 @@ type ProjectSnapshot struct {
 	// DirectoryCount is the number of directories under root (root excluded).
 	DirectoryCount int
 
+	// Codebase holds the structured code model: files, directories,
+	// packages, and their dependency relationships.
+	// This is the S4 deliverable that S5 will consume for graph construction.
+	Codebase codebase.Codebase
+
 	// Git holds the Git intelligence for this project.
 	// Git.IsRepository is false when the target is not inside a Git
 	// repository -- that is a valid, expected state.
@@ -58,7 +64,7 @@ type ProjectSnapshot struct {
 //
 // Pipeline:
 //
-//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Git -> Snapshot
+//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Git -> Codebase -> Snapshot
 //
 // This is the single orchestration point. No caller should need to
 // run the individual steps manually unless they have a specific reason.
@@ -92,6 +98,9 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 		return ProjectSnapshot{}, err
 	}
 
+	// S4: Codebase structure intelligence.
+	cb := codebase.Discover(rootResult.Root, inv)
+
 	return ProjectSnapshot{
 		Name:           meta.Name,
 		Root:           meta.Root,
@@ -101,6 +110,7 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 		Directories:    inv.Dirs,
 		FileCount:      meta.FileCount,
 		DirectoryCount: meta.DirectoryCount,
+		Codebase:       cb,
 		Git:            gitInfo,
 	}, nil
 }
