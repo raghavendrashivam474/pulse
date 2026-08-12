@@ -104,7 +104,7 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 	fmt.Fprintf(w.Out, "  Files:       %d\n", snap.FileCount)
 	fmt.Fprintf(w.Out, "  Directories: %d\n", snap.DirectoryCount)
 
-	// S4: Packages section
+	// S4: Packages section.
 	pkgNames := codebase.PackageNames(snap.Codebase.Packages)
 	if len(pkgNames) > 0 {
 		fmt.Fprintf(w.Out, "\n")
@@ -114,12 +114,33 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 		}
 	}
 
-	// S4: Dependencies section
+	// S4: Dependencies section.
 	if len(snap.Codebase.Dependencies) > 0 {
 		fmt.Fprintf(w.Out, "\n")
 		fmt.Fprintf(w.Out, "Dependencies\n")
 		for _, dep := range snap.Codebase.Dependencies {
-			fmt.Fprintf(w.Out, "  %-20s → %s\n", dep.From, dep.To)
+			fmt.Fprintf(w.Out, "  %-20s -> %s\n", dep.From, dep.To)
+		}
+	}
+
+	// S5: Relationships section — concise summary only.
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "Relationships\n")
+	fmt.Fprintf(w.Out, "  Nodes: %d\n", snap.Graph.NodeCount())
+	fmt.Fprintf(w.Out, "  Edges: %d\n", snap.Graph.EdgeCount())
+	if snap.Graph.EdgeCount() > 0 {
+		byKind := snap.Graph.EdgesByKind()
+		if n := byKind[codebase.RelationshipContains]; n > 0 {
+			fmt.Fprintf(w.Out, "  Contains:   %d\n", n)
+		}
+		if n := byKind[codebase.RelationshipBelongsTo]; n > 0 {
+			fmt.Fprintf(w.Out, "  Belongs to: %d\n", n)
+		}
+		if n := byKind[codebase.RelationshipImports]; n > 0 {
+			fmt.Fprintf(w.Out, "  Imports:    %d\n", n)
+		}
+		if n := byKind[codebase.RelationshipDependsOn]; n > 0 {
+			fmt.Fprintf(w.Out, "  Depends on: %d\n", n)
 		}
 	}
 
@@ -134,7 +155,7 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 	fmt.Fprintf(w.Out, "  Branch:       %s\n", snap.Git.Branch)
 	fmt.Fprintf(w.Out, "  Working Tree: %s\n", workingTreeLabel(snap.Git.WorkingTreeState))
 
-	// History section (M3.5)
+	// History section (M3.5).
 	fmt.Fprintf(w.Out, "\n")
 	fmt.Fprintf(w.Out, "History\n")
 	if snap.Git.History.Count == 0 {
@@ -148,7 +169,7 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 		fmt.Fprintf(w.Out, "  Date:    %s\n", h.Latest.Timestamp.Format("2006-01-02"))
 	}
 
-	// Contributors section (M3.6)
+	// Contributors section (M3.6).
 	fmt.Fprintf(w.Out, "\n")
 	fmt.Fprintf(w.Out, "Contributors\n")
 	if snap.Git.Contributors.Count == 0 {
@@ -160,7 +181,7 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 		}
 	}
 
-	// Health section (M3.7)
+	// Health section (M3.7).
 	fmt.Fprintf(w.Out, "\n")
 	fmt.Fprintf(w.Out, "Health\n")
 	fmt.Fprintf(w.Out, "  Commits:      %s\n", yesNo(snap.Git.Health.HasCommits))
@@ -219,6 +240,7 @@ type JSONProjectSection struct {
 	DirectoryCount int                 `json:"directory_count"`
 	Codebase       JSONCodebaseSection `json:"codebase"`
 	Git            JSONGitSection      `json:"git"`
+	Graph          JSONGraphSection    `json:"graph"`
 }
 
 // JSONCodebaseSection holds the structured codebase model in JSON output.
@@ -304,6 +326,28 @@ type JSONHealthSection struct {
 	DetachedHEAD     bool `json:"detached_head"`
 }
 
+// JSONGraphSection is the machine-readable representation of the code graph.
+// This is the primary S5 JSON deliverable.
+type JSONGraphSection struct {
+	Nodes []JSONGraphNode `json:"nodes"`
+	Edges []JSONGraphEdge `json:"edges"`
+}
+
+// JSONGraphNode represents a single node in the graph JSON output.
+type JSONGraphNode struct {
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+	Path string `json:"path,omitempty"`
+}
+
+// JSONGraphEdge represents a single directed edge in the graph JSON output.
+type JSONGraphEdge struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	Kind string `json:"kind"`
+}
+
 // PrintDiscoveryJSON renders a ProjectSnapshot as JSON to stdout.
 func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 	langs := make([]string, len(snap.Languages))
@@ -367,7 +411,6 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 		gitSection.Branch = snap.Git.Branch
 		gitSection.WorkingTree = string(snap.Git.WorkingTreeState)
 
-		// History
 		h := snap.Git.History
 		histSection := &JSONHistorySection{Count: h.Count}
 		if h.Count > 0 {
@@ -380,7 +423,6 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 		}
 		gitSection.History = histSection
 
-		// Contributors
 		contribItems := make([]JSONContributorItem, len(snap.Git.Contributors.Items))
 		for i, c := range snap.Git.Contributors.Items {
 			contribItems[i] = JSONContributorItem{
@@ -393,13 +435,37 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 			Items: contribItems,
 		}
 
-		// Health
 		gitSection.Health = &JSONHealthSection{
 			HasCommits:       snap.Git.Health.HasCommits,
 			HasContributors:  snap.Git.Health.HasContributors,
 			WorkingTreeClean: snap.Git.Health.WorkingTreeClean,
 			DetachedHEAD:     snap.Git.Health.DetachedHEAD,
 		}
+	}
+
+	// Build graph section.
+	graphNodes := make([]JSONGraphNode, len(snap.Graph.Nodes))
+	for i, n := range snap.Graph.Nodes {
+		graphNodes[i] = JSONGraphNode{
+			ID:   n.ID,
+			Kind: string(n.Kind),
+			Name: n.Name,
+			Path: n.Path,
+		}
+	}
+
+	graphEdges := make([]JSONGraphEdge, len(snap.Graph.Edges))
+	for i, e := range snap.Graph.Edges {
+		graphEdges[i] = JSONGraphEdge{
+			From: e.From,
+			To:   e.To,
+			Kind: string(e.Kind),
+		}
+	}
+
+	graphSection := JSONGraphSection{
+		Nodes: graphNodes,
+		Edges: graphEdges,
 	}
 
 	result := JSONDiscoveryResult{
@@ -414,6 +480,7 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 			DirectoryCount: snap.DirectoryCount,
 			Codebase:       codebaseSection,
 			Git:            gitSection,
+			Graph:          graphSection,
 		},
 	}
 

@@ -50,13 +50,19 @@ type ProjectSnapshot struct {
 
 	// Codebase holds the structured code model: files, directories,
 	// packages, and their dependency relationships.
-	// This is the S4 deliverable that S5 will consume for graph construction.
+	// This is the S4 deliverable consumed by S5 graph construction.
 	Codebase codebase.Codebase
 
 	// Git holds the Git intelligence for this project.
 	// Git.IsRepository is false when the target is not inside a Git
-	// repository -- that is a valid, expected state.
+	// repository — that is a valid, expected state.
 	Git git.GitInfo
+
+	// Graph is the unified relationship graph for this project.
+	// It contains all nodes (files, directories, packages) and the
+	// directed edges between them (contains, belongs_to, imports, depends_on).
+	// This is the primary S5 deliverable.
+	Graph codebase.CodeGraph
 }
 
 // Discover runs the complete project discovery pipeline and returns
@@ -64,7 +70,7 @@ type ProjectSnapshot struct {
 //
 // Pipeline:
 //
-//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Git -> Codebase -> Snapshot
+//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Git -> Codebase -> Graph -> Snapshot
 //
 // This is the single orchestration point. No caller should need to
 // run the individual steps manually unless they have a specific reason.
@@ -90,7 +96,7 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 	// M2.5 + M2.6: Build metadata (includes language detection).
 	meta := project.NewMetadata(rootResult.Root, detection, inv)
 
-	// S3: Git intelligence -- run against the resolved target so the
+	// S3: Git intelligence — run against the resolved target so the
 	// Git package identifies the repository root independently of the
 	// project root.
 	gitInfo, err := git.Discover(resolvedTarget.Path)
@@ -100,6 +106,9 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 
 	// S4: Codebase structure intelligence.
 	cb := codebase.Discover(rootResult.Root, inv)
+
+	// S5: Relationship graph.
+	graph := codebase.BuildCodeGraph(rootResult.Root, cb, inv)
 
 	return ProjectSnapshot{
 		Name:           meta.Name,
@@ -112,5 +121,6 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 		DirectoryCount: meta.DirectoryCount,
 		Codebase:       cb,
 		Git:            gitInfo,
+		Graph:          graph,
 	}, nil
 }
