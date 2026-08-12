@@ -7,9 +7,6 @@ import (
 
 // rootMarkers are filesystem entries whose presence strongly suggests
 // that the containing directory is a project root.
-//
-// Deliberately small — well-known, unambiguous markers only.
-// Extended in later sprints as Pulse learns more ecosystems.
 var rootMarkers = []string{
 	".git",
 	"go.mod",
@@ -20,33 +17,42 @@ var rootMarkers = []string{
 	"build.gradle",
 }
 
-// RootDiscovery is the result of walking upward from a target directory.
+// RootDiscovery is the result of root discovery from a target directory.
 type RootDiscovery struct {
 	// Root is the discovered project root directory.
-	// Always a valid absolute path.
 	Root string
 
-	// Marker is the filename that indicated the project root.
-	// Empty string when no marker was found (MarkerFound == false).
+	// Marker is the filename that indicated the root.
 	Marker string
 
-	// MarkerFound reports whether a root marker was found during the walk.
-	// When false, Root equals the original target path (fallback behaviour).
+	// MarkerFound reports whether a root marker was found.
 	MarkerFound bool
 }
 
-// DiscoverRoot walks upward from target.Path looking for a recognised
-// project root marker.
+// DiscoverRoot resolves the project root for a validated target.
 //
-// Behaviour when no marker is found:
-//   - The target directory itself is treated as the root.
-//   - RootDiscovery.MarkerFound will be false.
-//   - This is not an error. Pulse can still analyse the project.
+// Hardening rule:
+// If the target was explicitly supplied by the user, that directory is the
+// analysis boundary. Discovery must not walk upward into ancestors.
 //
-// The walk stops at the filesystem root to prevent runaway traversal.
-// Symlinks in the path are not resolved — the walk follows the logical
-// path as provided.
+// If target.Explicit is false, upward walking is still allowed.
 func DiscoverRoot(target Target) RootDiscovery {
+	if target.Explicit {
+		if marker, found := findMarker(target.Path); found {
+			return RootDiscovery{
+				Root:        target.Path,
+				Marker:      marker,
+				MarkerFound: true,
+			}
+		}
+
+		return RootDiscovery{
+			Root:        target.Path,
+			Marker:      "",
+			MarkerFound: false,
+		}
+	}
+
 	current := target.Path
 
 	for {
@@ -59,9 +65,6 @@ func DiscoverRoot(target Target) RootDiscovery {
 		}
 
 		parent := filepath.Dir(current)
-
-		// filepath.Dir returns the same string when we have reached the
-		// filesystem root. Stop here to avoid an infinite loop.
 		if parent == current {
 			break
 		}
@@ -69,9 +72,6 @@ func DiscoverRoot(target Target) RootDiscovery {
 		current = parent
 	}
 
-	// No marker found anywhere in the ancestor chain.
-	// Fall back to the original target as the root.
-	// MarkerFound == false documents this explicitly to callers.
 	return RootDiscovery{
 		Root:        target.Path,
 		Marker:      "",
@@ -80,7 +80,6 @@ func DiscoverRoot(target Target) RootDiscovery {
 }
 
 // findMarker checks whether any known root marker exists inside dir.
-// Returns the marker name and true if found, empty string and false otherwise.
 func findMarker(dir string) (string, bool) {
 	for _, marker := range rootMarkers {
 		candidate := filepath.Join(dir, marker)

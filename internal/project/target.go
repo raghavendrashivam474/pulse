@@ -13,6 +13,10 @@ import (
 type Target struct {
 	// Path is the absolute, cleaned path to the analysis target directory.
 	Path string
+
+	// Explicit reports whether the user explicitly supplied this path.
+	// When true, discovery must not walk above Path.
+	Explicit bool
 }
 
 // ResolveTarget validates that the given path is suitable for analysis.
@@ -20,13 +24,10 @@ type Target struct {
 // The path must:
 //   - not be empty
 //   - exist on the filesystem
-//   - be a directory (Pulse analyses projects, not individual files)
+//   - be a directory
 //
 // The path received here should already be absolute and cleaned by Config.
-// ResolveTarget adds the semantic validation layer on top.
-//
-// Returns a classified PulseError on any failure so the caller can render
-// an appropriate message without exposing raw filesystem errors to the user.
+// ResolveTarget adds semantic validation on top.
 func ResolveTarget(path string) (Target, error) {
 	if path == "" {
 		return Target{}, pulseErrors.User("target path must not be empty")
@@ -39,7 +40,7 @@ func ResolveTarget(path string) (Target, error) {
 				fmt.Sprintf("target path does not exist: %s", path),
 			)
 		}
-		// Path exists but cannot be stat'd — permissions or broken symlink.
+
 		return Target{}, pulseErrors.Environment(
 			fmt.Sprintf("target path cannot be accessed: %s", path),
 			statErr,
@@ -53,6 +54,7 @@ func ResolveTarget(path string) (Target, error) {
 	}
 
 	return Target{
-		Path: filepath.Clean(path),
+		Path:     filepath.Clean(path),
+		Explicit: true,
 	}, nil
 }

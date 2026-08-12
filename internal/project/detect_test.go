@@ -195,3 +195,23 @@ func TestDetectType_MarkersPopulated(t *testing.T) {
 		t.Errorf("expected go.mod in Markers, got %v", d.Markers)
 	}
 }
+
+func TestDetectType_GoSourceWithoutGoMod(t *testing.T) {
+	inv := scanDir(t, map[string]string{
+		"main.go":         "package main\n",
+		"internal/app.go": "package internal\n",
+		"README.md":       "# fixture\n",
+	})
+
+	d := project.DetectType(inv)
+
+	if d.Primary != project.TypeGo {
+		t.Errorf("expected %q from Go source fallback, got %q", project.TypeGo, d.Primary)
+	}
+	if len(d.AllDetected) == 0 {
+		t.Fatal("expected AllDetected to be populated")
+	}
+	if d.AllDetected[0] != project.TypeGo {
+		t.Errorf("expected AllDetected[0] = %q, got %q", project.TypeGo, d.AllDetected[0])
+	}
+}

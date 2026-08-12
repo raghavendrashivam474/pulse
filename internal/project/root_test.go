@@ -8,8 +8,7 @@ import (
 	"pulse/internal/testhelpers"
 )
 
-// resolveTarget is a local helper that wraps ResolveTarget and fails
-// the test immediately on any error. Keeps test bodies clean.
+// resolveTarget wraps ResolveTarget and fails fast on error.
 func resolveTarget(t *testing.T, path string) project.Target {
 	t.Helper()
 	target, err := project.ResolveTarget(path)
@@ -38,7 +37,7 @@ func TestDiscoverRoot_TargetIsAlreadyRoot(t *testing.T) {
 	}
 }
 
-func TestDiscoverRoot_NestedOneLevel(t *testing.T) {
+func TestDiscoverRoot_NestedOneLevel_NonExplicitTargetCanAscend(t *testing.T) {
 	dir := testhelpers.TempProject(t, map[string]string{
 		"go.mod":          "module example.com/test\n\ngo 1.21\n",
 		"internal/app.go": "package internal\n",
@@ -46,6 +45,8 @@ func TestDiscoverRoot_NestedOneLevel(t *testing.T) {
 
 	nested := filepath.Join(dir, "internal")
 	target := resolveTarget(t, nested)
+	target.Explicit = false
+
 	result := project.DiscoverRoot(target)
 
 	if result.Root != filepath.Clean(dir) {
@@ -56,7 +57,7 @@ func TestDiscoverRoot_NestedOneLevel(t *testing.T) {
 	}
 }
 
-func TestDiscoverRoot_DeeplyNested(t *testing.T) {
+func TestDiscoverRoot_DeeplyNested_NonExplicitTargetCanAscend(t *testing.T) {
 	dir := testhelpers.TempProject(t, map[string]string{
 		"go.mod":                      "module example.com/test\n\ngo 1.21\n",
 		"internal/service/handler.go": "package service\n",
@@ -64,6 +65,8 @@ func TestDiscoverRoot_DeeplyNested(t *testing.T) {
 
 	deep := filepath.Join(dir, "internal", "service")
 	target := resolveTarget(t, deep)
+	target.Explicit = false
+
 	result := project.DiscoverRoot(target)
 
 	if result.Root != filepath.Clean(dir) {
@@ -94,8 +97,6 @@ func TestDiscoverRoot_NoMarker_FallsBackToTarget(t *testing.T) {
 }
 
 func TestDiscoverRoot_GitDirectory(t *testing.T) {
-	// TempProject creates files, so .git/config simulates a .git directory
-	// existing at the project root.
 	dir := testhelpers.TempProject(t, map[string]string{
 		".git/config": "[core]\n\trepositoryformatversion = 0\n",
 	})
@@ -153,5 +154,47 @@ func TestDiscoverRoot_RootAlwaysAbsolute(t *testing.T) {
 
 	if !filepath.IsAbs(result.Root) {
 		t.Errorf("expected Root to be absolute, got %q", result.Root)
+	}
+}
+
+func TestDiscoverRoot_ExplicitTarget_DoesNotEscapeToAncestor(t *testing.T) {
+	outer := testhelpers.TempProject(t, map[string]string{
+		"go.mod":        "module outer\n\ngo 1.21\n",
+		"inner/main.go": "package main\n",
+	})
+
+	inner := filepath.Join(outer, "inner")
+	target := resolveTarget(t, inner)
+
+	result := project.DiscoverRoot(target)
+
+	if result.Root != filepath.Clean(inner) {
+		t.Errorf("boundary violation: got root %q, want %q", result.Root, filepath.Clean(inner))
+	}
+	if result.Root == filepath.Clean(outer) {
+		t.Fatalf("explicit target escaped to ancestor root %q", result.Root)
+	}
+}
+
+func TestDiscoverRoot_ExplicitTarget_WithOwnMarker_StaysOnTarget(t *testing.T) {
+	outer := testhelpers.TempProject(t, map[string]string{
+		"go.mod":             "module outer\n\ngo 1.21\n",
+		"inner/package.json": "{\"name\":\"inner\"}\n",
+		"inner/index.js":     "console.log('hi')\n",
+	})
+
+	inner := filepath.Join(outer, "inner")
+	target := resolveTarget(t, inner)
+
+	result := project.DiscoverRoot(target)
+
+	if result.Root != filepath.Clean(inner) {
+		t.Errorf("expected root %q, got %q", filepath.Clean(inner), result.Root)
+	}
+	if !result.MarkerFound {
+		t.Error("expected MarkerFound to be true")
+	}
+	if result.Marker != "package.json" {
+		t.Errorf("expected marker %q, got %q", "package.json", result.Marker)
 	}
 }

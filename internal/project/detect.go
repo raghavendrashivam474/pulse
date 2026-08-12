@@ -19,19 +19,16 @@ const (
 // Detection is the result of project type analysis.
 type Detection struct {
 	// Primary is the single most-confident project type.
-	// Always set — TypeUnknown when no markers are recognised.
 	Primary ProjectType
 
-	// AllDetected contains every ecosystem detected from markers,
-	// ordered by detection priority. A project with both go.mod and
-	// package.json will have two entries here.
+	// AllDetected contains every ecosystem detected from markers.
 	AllDetected []ProjectType
 
 	// Markers are the filenames that contributed to detection.
 	Markers []string
 }
 
-// markerTypes maps known project marker filenames to their ecosystem type.
+// markerTypes maps known marker filenames to ecosystem type.
 var markerTypes = map[string]ProjectType{
 	"go.mod":           TypeGo,
 	"package.json":     TypeNode,
@@ -43,8 +40,6 @@ var markerTypes = map[string]ProjectType{
 }
 
 // detectionOrder defines priority when multiple markers are present.
-// The first match in this list becomes the Primary type.
-// Every key in markerTypes must be reachable via this list.
 var detectionOrder = []string{
 	"go.mod",
 	"Cargo.toml",
@@ -57,21 +52,6 @@ var detectionOrder = []string{
 
 // DetectType analyses a filesystem inventory and returns the detected
 // project type.
-//
-// Detection rules:
-//  1. Every file in the inventory is checked by filename (not full path).
-//  2. All matching ecosystems are recorded.
-//  3. Primary is chosen by the priority order in detectionOrder.
-//  4. When no markers are found, Primary is TypeUnknown.
-//
-// TypeUnknown is not an error condition. It means Pulse does not recognise
-// the project ecosystem — the project is still valid and can be analysed
-// structurally. The distinction is:
-//
-//	"unable to analyse" != "unknown project type"
-//
-// Detection is deterministic: given identical inventory input, the output
-// is always identical.
 func DetectType(inv scanner.Inventory) Detection {
 	seenTypes := make(map[ProjectType]bool)
 	var matchedMarkers []string
@@ -85,14 +65,9 @@ func DetectType(inv scanner.Inventory) Detection {
 	}
 
 	if len(seenTypes) == 0 {
-		return Detection{
-			Primary:     TypeUnknown,
-			AllDetected: []ProjectType{TypeUnknown},
-			Markers:     nil,
-		}
+		return inferTypeFromFiles(inv)
 	}
 
-	// Build AllDetected in priority order so the output is deterministic.
 	var allDetected []ProjectType
 	var primary ProjectType
 
@@ -113,9 +88,27 @@ func DetectType(inv scanner.Inventory) Detection {
 	}
 }
 
+// inferTypeFromFiles provides a minimal fallback when no marker files exist.
+// Pre-S3 hardening only needs Go inference for the go-project fixture.
+func inferTypeFromFiles(inv scanner.Inventory) Detection {
+	for _, f := range inv.Files {
+		if f.Extension == ".go" {
+			return Detection{
+				Primary:     TypeGo,
+				AllDetected: []ProjectType{TypeGo},
+				Markers:     nil,
+			}
+		}
+	}
+
+	return Detection{
+		Primary:     TypeUnknown,
+		AllDetected: []ProjectType{TypeUnknown},
+		Markers:     nil,
+	}
+}
+
 // baseName returns the final segment of a forward-slash-separated path.
-// "internal/config/go.mod" -> "go.mod"
-// "go.mod"                 -> "go.mod"
 func baseName(path string) string {
 	for i := len(path) - 1; i >= 0; i-- {
 		if path[i] == '/' {
