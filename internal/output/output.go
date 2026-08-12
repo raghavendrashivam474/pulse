@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 
+	"pulse/internal/git"
 	"pulse/internal/snapshot"
 )
 
@@ -103,6 +104,28 @@ func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
 	fmt.Fprintf(w.Out, "Structure\n")
 	fmt.Fprintf(w.Out, "  Files:       %d\n", snap.FileCount)
 	fmt.Fprintf(w.Out, "  Directories: %d\n", snap.DirectoryCount)
+
+	fmt.Fprintf(w.Out, "\n")
+	fmt.Fprintf(w.Out, "Git\n")
+	if !snap.Git.IsRepository {
+		fmt.Fprintf(w.Out, "  Repository: No\n")
+	} else {
+		fmt.Fprintf(w.Out, "  Repository:   %s\n", snap.Git.RepositoryName)
+		fmt.Fprintf(w.Out, "  Branch:       %s\n", snap.Git.Branch)
+		fmt.Fprintf(w.Out, "  Working Tree: %s\n", workingTreeLabel(snap.Git.WorkingTreeState))
+	}
+}
+
+// workingTreeLabel converts a WorkingTreeState to a display string.
+func workingTreeLabel(state git.WorkingTreeState) string {
+	switch state {
+	case git.WorkingTreeClean:
+		return "Clean"
+	case git.WorkingTreeDirty:
+		return "Dirty"
+	default:
+		return "Unknown"
+	}
 }
 
 // JSONDiscoveryResult is the top-level structure for machine-readable
@@ -115,12 +138,22 @@ type JSONDiscoveryResult struct {
 
 // JSONProjectSection holds project-specific fields in the JSON output.
 type JSONProjectSection struct {
-	Name           string   `json:"name"`
-	Root           string   `json:"root"`
-	Type           string   `json:"type"`
-	Languages      []string `json:"languages"`
-	FileCount      int      `json:"file_count"`
-	DirectoryCount int      `json:"directory_count"`
+	Name           string         `json:"name"`
+	Root           string         `json:"root"`
+	Type           string         `json:"type"`
+	Languages      []string       `json:"languages"`
+	FileCount      int            `json:"file_count"`
+	DirectoryCount int            `json:"directory_count"`
+	Git            JSONGitSection `json:"git"`
+}
+
+// JSONGitSection holds Git-specific fields in the JSON output.
+type JSONGitSection struct {
+	IsRepository   bool   `json:"is_repository"`
+	RepositoryRoot string `json:"repository_root,omitempty"`
+	RepositoryName string `json:"repository_name,omitempty"`
+	Branch         string `json:"branch,omitempty"`
+	WorkingTree    string `json:"working_tree,omitempty"`
 }
 
 // PrintDiscoveryJSON renders a ProjectSnapshot as JSON to stdout.
@@ -128,6 +161,16 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 	langs := make([]string, len(snap.Languages))
 	for i, l := range snap.Languages {
 		langs[i] = string(l)
+	}
+
+	gitSection := JSONGitSection{
+		IsRepository: snap.Git.IsRepository,
+	}
+	if snap.Git.IsRepository {
+		gitSection.RepositoryRoot = snap.Git.RepositoryRoot
+		gitSection.RepositoryName = snap.Git.RepositoryName
+		gitSection.Branch = snap.Git.Branch
+		gitSection.WorkingTree = string(snap.Git.WorkingTreeState)
 	}
 
 	result := JSONDiscoveryResult{
@@ -140,6 +183,7 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 			Languages:      langs,
 			FileCount:      snap.FileCount,
 			DirectoryCount: snap.DirectoryCount,
+			Git:            gitSection,
 		},
 	}
 

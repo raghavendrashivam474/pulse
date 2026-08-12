@@ -9,6 +9,7 @@
 package snapshot
 
 import (
+	"pulse/internal/git"
 	"pulse/internal/project"
 	"pulse/internal/scanner"
 )
@@ -45,6 +46,11 @@ type ProjectSnapshot struct {
 
 	// DirectoryCount is the number of directories under root (root excluded).
 	DirectoryCount int
+
+	// Git holds the Git intelligence for this project.
+	// Git.IsRepository is false when the target is not inside a Git
+	// repository -- that is a valid, expected state.
+	Git git.GitInfo
 }
 
 // Discover runs the complete project discovery pipeline and returns
@@ -52,7 +58,7 @@ type ProjectSnapshot struct {
 //
 // Pipeline:
 //
-//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Snapshot
+//	Config -> Target -> Root -> Scan -> Detect -> Metadata -> Git -> Snapshot
 //
 // This is the single orchestration point. No caller should need to
 // run the individual steps manually unless they have a specific reason.
@@ -78,6 +84,14 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 	// M2.5 + M2.6: Build metadata (includes language detection).
 	meta := project.NewMetadata(rootResult.Root, detection, inv)
 
+	// S3: Git intelligence -- run against the resolved target so the
+	// Git package identifies the repository root independently of the
+	// project root.
+	gitInfo, err := git.Discover(resolvedTarget.Path)
+	if err != nil {
+		return ProjectSnapshot{}, err
+	}
+
 	return ProjectSnapshot{
 		Name:           meta.Name,
 		Root:           meta.Root,
@@ -87,5 +101,6 @@ func Discover(targetPath string) (ProjectSnapshot, error) {
 		Directories:    inv.Dirs,
 		FileCount:      meta.FileCount,
 		DirectoryCount: meta.DirectoryCount,
+		Git:            gitInfo,
 	}, nil
 }
