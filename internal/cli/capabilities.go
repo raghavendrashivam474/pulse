@@ -5,7 +5,7 @@ import (
 	"github.com/raghavendrashivam474/aayam/internal/output"
 )
 
-// ── overview ─────────────────────────────────────────────────────────────────
+// -- overview -----------------------------------------------------------------
 
 type overviewCapability struct {
 	writer *output.Writer
@@ -24,7 +24,7 @@ func (c overviewCapability) Run(ctx capability.Context) (capability.Result, erro
 	return capability.Result{CapabilityName: "overview"}, nil
 }
 
-// ── project (M6.3) ───────────────────────────────────────────────────────────
+// -- project (M6.3) -----------------------------------------------------------
 
 type projectCapability struct {
 	writer *output.Writer
@@ -43,7 +43,7 @@ func (c projectCapability) Run(ctx capability.Context) (capability.Result, error
 	return capability.Result{CapabilityName: "project"}, nil
 }
 
-// ── structure (M6.4) ─────────────────────────────────────────────────────────
+// -- structure (M6.4) ---------------------------------------------------------
 
 type structureCapability struct {
 	writer *output.Writer
@@ -62,7 +62,7 @@ func (c structureCapability) Run(ctx capability.Context) (capability.Result, err
 	return capability.Result{CapabilityName: "structure"}, nil
 }
 
-// ── relationships (M6.5) ─────────────────────────────────────────────────────
+// -- relationships (M6.5) -----------------------------------------------------
 
 type relationshipsCapability struct {
 	writer *output.Writer
@@ -81,7 +81,64 @@ func (c relationshipsCapability) Run(ctx capability.Context) (capability.Result,
 	return capability.Result{CapabilityName: "relationships"}, nil
 }
 
-// ── registry ─────────────────────────────────────────────────────────────────
+// -- dependencies (M6.6) ------------------------------------------------------
+
+type dependenciesCapability struct {
+	writer *output.Writer
+}
+
+func (c dependenciesCapability) Name() string        { return "dependencies" }
+func (c dependenciesCapability) Description() string { return "Show package dependency relationships" }
+func (c dependenciesCapability) Run(ctx capability.Context) (capability.Result, error) {
+	if ctx.JSON {
+		if err := c.writer.PrintDependenciesJSON(ctx.Snap); err != nil {
+			return capability.Result{}, err
+		}
+	} else {
+		c.writer.PrintDependencies(ctx.Snap)
+	}
+	return capability.Result{CapabilityName: "dependencies"}, nil
+}
+
+// -- git (M6.7) ---------------------------------------------------------------
+
+type gitCapability struct {
+	writer *output.Writer
+}
+
+func (c gitCapability) Name() string        { return "git" }
+func (c gitCapability) Description() string { return "Show current Git repository state" }
+func (c gitCapability) Run(ctx capability.Context) (capability.Result, error) {
+	if ctx.JSON {
+		if err := c.writer.PrintGitJSON(ctx.Snap); err != nil {
+			return capability.Result{}, err
+		}
+	} else {
+		c.writer.PrintGit(ctx.Snap)
+	}
+	return capability.Result{CapabilityName: "git"}, nil
+}
+
+// -- history (M6.8) -----------------------------------------------------------
+
+type historyCapability struct {
+	writer *output.Writer
+}
+
+func (c historyCapability) Name() string        { return "history" }
+func (c historyCapability) Description() string { return "Show repository history summary" }
+func (c historyCapability) Run(ctx capability.Context) (capability.Result, error) {
+	if ctx.JSON {
+		if err := c.writer.PrintHistoryJSON(ctx.Snap); err != nil {
+			return capability.Result{}, err
+		}
+	} else {
+		c.writer.PrintHistory(ctx.Snap)
+	}
+	return capability.Result{CapabilityName: "history"}, nil
+}
+
+// -- registry -----------------------------------------------------------------
 
 func newCapabilityRegistry(w *output.Writer) *capability.Registry {
 	reg := capability.NewRegistry()
@@ -96,6 +153,9 @@ func newCapabilityRegistry(w *output.Writer) *capability.Registry {
 	mustRegister(projectCapability{writer: w})
 	mustRegister(structureCapability{writer: w})
 	mustRegister(relationshipsCapability{writer: w})
+	mustRegister(dependenciesCapability{writer: w})
+	mustRegister(gitCapability{writer: w})
+	mustRegister(historyCapability{writer: w})
 
 	return reg
 }
