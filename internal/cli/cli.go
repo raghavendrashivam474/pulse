@@ -1,33 +1,31 @@
-// Package cli handles argument parsing and application flow for Aryntra Aayam.
 package cli
 
 import (
 	"os"
 
+	"github.com/raghavendrashivam474/aayam/internal/capability"
 	"github.com/raghavendrashivam474/aayam/internal/config"
 	aayamErrors "github.com/raghavendrashivam474/aayam/internal/errors"
 	"github.com/raghavendrashivam474/aayam/internal/output"
 	"github.com/raghavendrashivam474/aayam/internal/snapshot"
 )
 
-// ExitSuccess is the process exit code for a successful run.
 const ExitSuccess = 0
-
-// ExitFailure is the process exit code for any failure.
 const ExitFailure = 1
 
-// Args holds the parsed command-line arguments.
+// Args holds parsed CLI arguments.
 type Args struct {
-	Help       bool
-	Version    bool
-	JSON       bool
-	TargetPath string
+	Help           bool
+	Version        bool
+	JSON           bool
+	CapabilityName string
+	TargetPath     string
+	Positionals    []string
 }
 
 // ParseArgs parses os.Args-style input into an Args struct.
 func ParseArgs(args []string) (*Args, error) {
 	parsed := &Args{}
-	positional := 0
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -41,29 +39,63 @@ func ParseArgs(args []string) (*Args, error) {
 			if len(args[i]) > 0 && args[i][0] == '-' {
 				return nil, aayamErrors.User("unknown flag: " + args[i])
 			}
-			positional++
-			if positional > 1 {
-				return nil, aayamErrors.User("too many arguments: only one target path is allowed")
+
+			parsed.Positionals = append(parsed.Positionals, args[i])
+			if len(parsed.Positionals) > 2 {
+				return nil, aayamErrors.User("too many arguments: expected [capability] [target] or [target]")
 			}
-			parsed.TargetPath = args[i]
 		}
+	}
+
+	if len(parsed.Positionals) == 1 {
+		parsed.TargetPath = parsed.Positionals[0]
 	}
 
 	return parsed, nil
 }
 
-// Run is the main entry point for the Aryntra Aayam CLI.
-// It returns a process exit code.
-//
-// When a target path is provided:
-//
-//	Config -> Snapshot.Discover -> Output
-//
-// When no target path is provided:
-//
-//	Summary / placeholder output
+// ResolveCommand maps positional arguments into either legacy target mode
+// or capability mode.
+func ResolveCommand(parsed *Args, registry *capability.Registry) error {
+	switch len(parsed.Positionals) {
+	case 0:
+		parsed.CapabilityName = ""
+		parsed.TargetPath = ""
+		return nil
+
+	case 1:
+		first := parsed.Positionals[0]
+		if registry != nil && registry.IsKnown(first) {
+			parsed.CapabilityName = first
+			parsed.TargetPath = "."
+			return nil
+		}
+
+		parsed.CapabilityName = ""
+		parsed.TargetPath = first
+		return nil
+
+	case 2:
+		first := parsed.Positionals[0]
+		second := parsed.Positionals[1]
+
+		if registry == nil || !registry.IsKnown(first) {
+			return aayamErrors.User("unknown capability: " + first)
+		}
+
+		parsed.CapabilityName = first
+		parsed.TargetPath = second
+		return nil
+
+	default:
+		return aayamErrors.User("too many arguments: expected [capability] [target] or [target]")
+	}
+}
+
+// Run executes the CLI and returns a process exit code.
 func Run(args []string) int {
 	w := output.Default()
+	registry := newCapabilityRegistry(w)
 
 	parsed, err := ParseArgs(args)
 	if err != nil {
@@ -72,7 +104,7 @@ func Run(args []string) int {
 	}
 
 	if parsed.Help {
-		w.PrintHelp()
+		w.PrintHelpWithCapabilities(capabilityHelpEntries(registry))
 		return ExitSuccess
 	}
 
@@ -81,8 +113,13 @@ func Run(args []string) int {
 		return ExitSuccess
 	}
 
-	// No target path: show summary or placeholder JSON.
-	if parsed.TargetPath == "" {
+	if err := ResolveCommand(parsed, registry); err != nil {
+		w.PrintError(err.Error())
+		return ExitFailure
+	}
+
+	// No target and no capability selected: preserve existing default behavior.
+	if parsed.TargetPath == "" && parsed.CapabilityName == "" {
 		if parsed.JSON {
 			if jsonErr := w.PrintJSON(); jsonErr != nil {
 				w.PrintError(jsonErr.Error())
@@ -90,11 +127,11 @@ func Run(args []string) int {
 			}
 			return ExitSuccess
 		}
+
 		w.PrintSummary()
 		return ExitSuccess
 	}
 
-	// Target path provided: run full discovery pipeline.
 	cfg, err := config.New(parsed.TargetPath, parsed.JSON)
 	if err != nil {
 		w.PrintError("could not resolve target path: " + err.Error())
@@ -105,6 +142,24 @@ func Run(args []string) int {
 	if err != nil {
 		w.PrintError(err.Error())
 		return ExitFailure
+	}
+
+	if parsed.CapabilityName != "" {
+		c, ok := registry.Lookup(parsed.CapabilityName)
+		if !ok {
+			w.PrintError("unknown capability: " + parsed.CapabilityName)
+			return ExitFailure
+		}
+
+		if _, err := c.Run(capability.Context{
+			Snap: snap,
+			JSON: cfg.JSON,
+		}); err != nil {
+			w.PrintError(err.Error())
+			return ExitFailure
+		}
+
+		return ExitSuccess
 	}
 
 	if cfg.JSON {
