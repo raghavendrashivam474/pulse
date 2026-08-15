@@ -26,7 +26,6 @@ type Args struct {
 // ParseArgs parses os.Args-style input into an Args struct.
 func ParseArgs(args []string) (*Args, error) {
 	parsed := &Args{}
-
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--help", "-h":
@@ -39,30 +38,25 @@ func ParseArgs(args []string) (*Args, error) {
 			if len(args[i]) > 0 && args[i][0] == '-' {
 				return nil, aayamErrors.User("unknown flag: " + args[i])
 			}
-
 			parsed.Positionals = append(parsed.Positionals, args[i])
 			if len(parsed.Positionals) > 2 {
 				return nil, aayamErrors.User("too many arguments: expected [capability] [target] or [target]")
 			}
 		}
 	}
-
 	if len(parsed.Positionals) == 1 {
 		parsed.TargetPath = parsed.Positionals[0]
 	}
-
 	return parsed, nil
 }
 
-// ResolveCommand maps positional arguments into either legacy target mode
-// or capability mode.
+// ResolveCommand maps positional arguments into capability mode or legacy target mode.
 func ResolveCommand(parsed *Args, registry *capability.Registry) error {
 	switch len(parsed.Positionals) {
 	case 0:
 		parsed.CapabilityName = ""
 		parsed.TargetPath = ""
 		return nil
-
 	case 1:
 		first := parsed.Positionals[0]
 		if registry != nil && registry.IsKnown(first) {
@@ -70,23 +64,18 @@ func ResolveCommand(parsed *Args, registry *capability.Registry) error {
 			parsed.TargetPath = "."
 			return nil
 		}
-
 		parsed.CapabilityName = ""
 		parsed.TargetPath = first
 		return nil
-
 	case 2:
 		first := parsed.Positionals[0]
 		second := parsed.Positionals[1]
-
 		if registry == nil || !registry.IsKnown(first) {
 			return aayamErrors.User("unknown capability: " + first)
 		}
-
 		parsed.CapabilityName = first
 		parsed.TargetPath = second
 		return nil
-
 	default:
 		return aayamErrors.User("too many arguments: expected [capability] [target] or [target]")
 	}
@@ -118,7 +107,6 @@ func Run(args []string) int {
 		return ExitFailure
 	}
 
-	// No target and no capability selected: preserve existing default behavior.
 	if parsed.TargetPath == "" && parsed.CapabilityName == "" {
 		if parsed.JSON {
 			if jsonErr := w.PrintJSON(); jsonErr != nil {
@@ -127,7 +115,6 @@ func Run(args []string) int {
 			}
 			return ExitSuccess
 		}
-
 		w.PrintSummary()
 		return ExitSuccess
 	}
@@ -150,27 +137,22 @@ func Run(args []string) int {
 			w.PrintError("unknown capability: " + parsed.CapabilityName)
 			return ExitFailure
 		}
-
-		if _, err := c.Run(capability.Context{
-			Snap: snap,
-			JSON: cfg.JSON,
-		}); err != nil {
+		if _, err := c.Run(capability.Context{Snap: snap, JSON: cfg.JSON}); err != nil {
 			w.PrintError(err.Error())
 			return ExitFailure
 		}
-
 		return ExitSuccess
 	}
 
 	if cfg.JSON {
-		if jsonErr := w.PrintDiscoveryJSON(snap); jsonErr != nil {
+		if jsonErr := w.PrintOverviewJSON(snap); jsonErr != nil {
 			w.PrintError(jsonErr.Error())
 			return ExitFailure
 		}
 		return ExitSuccess
 	}
 
-	w.PrintDiscovery(snap)
+	w.PrintOverview(snap)
 	return ExitSuccess
 }
 

@@ -241,3 +241,142 @@ func TestPrintDiscoveryJSON_StdoutOnly(t *testing.T) {
 		t.Errorf("expected stderr empty, got: %q", stderr.String())
 	}
 }
+
+// --- M6.2: Overview output tests ---
+
+func TestPrintOverview_ContainsName(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	if !strings.Contains(stdout.String(), "myapp") {
+		t.Errorf("expected project name in overview, got: %q", stdout.String())
+	}
+}
+
+func TestPrintOverview_ContainsType(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	if !strings.Contains(stdout.String(), "Go") {
+		t.Errorf("expected project type in overview, got: %q", stdout.String())
+	}
+}
+
+func TestPrintOverview_ContainsCounts(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	if !strings.Contains(got, "42") {
+		t.Errorf("expected file count 42 in overview, got: %q", got)
+	}
+	if !strings.Contains(got, "14") {
+		t.Errorf("expected directory count 14 in overview, got: %q", got)
+	}
+}
+
+func TestPrintOverview_ContainsLanguages(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	for _, lang := range []string{"Go", "Markdown", "PowerShell"} {
+		if !strings.Contains(got, lang) {
+			t.Errorf("expected language %q in overview, got: %q", lang, got)
+		}
+	}
+}
+
+func TestPrintOverview_NoLanguages(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	snap := testSnapshot()
+	snap.Languages = nil
+	w.PrintOverview(snap)
+	if !strings.Contains(stdout.String(), "(none detected)") {
+		t.Errorf("expected no-languages message in overview, got: %q", stdout.String())
+	}
+}
+
+func TestPrintOverview_DoesNotContainPackages(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	if strings.Contains(got, "Packages") {
+		t.Errorf("overview should not contain Packages section, got: %q", got)
+	}
+}
+
+func TestPrintOverview_DoesNotContainDependencies(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	if strings.Contains(got, "Dependencies") {
+		t.Errorf("overview should not contain Dependencies section, got: %q", got)
+	}
+}
+
+func TestPrintOverview_DoesNotContainHistory(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	if strings.Contains(got, "History") {
+		t.Errorf("overview should not contain History section, got: %q", got)
+	}
+}
+
+func TestPrintOverview_DoesNotContainContributors(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	got := stdout.String()
+	if strings.Contains(got, "Contributors") {
+		t.Errorf("overview should not contain Contributors section, got: %q", got)
+	}
+}
+
+func TestPrintOverview_StdoutOnly(t *testing.T) {
+	w, _, stderr := newTestWriter()
+	w.PrintOverview(testSnapshot())
+	if stderr.Len() != 0 {
+		t.Errorf("expected stderr empty, got: %q", stderr.String())
+	}
+}
+
+func TestPrintOverviewJSON_ValidJSON(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	err := w.PrintOverviewJSON(testSnapshot())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var parsed map[string]interface{}
+	if jsonErr := json.Unmarshal(stdout.Bytes(), &parsed); jsonErr != nil {
+		t.Fatalf("invalid JSON: %v\nraw: %s", jsonErr, stdout.String())
+	}
+}
+
+func TestPrintOverviewJSON_ExpectedFields(t *testing.T) {
+	w, stdout, _ := newTestWriter()
+	err := w.PrintOverviewJSON(testSnapshot())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var result output.JSONOverviewResult
+	if jsonErr := json.Unmarshal(stdout.Bytes(), &result); jsonErr != nil {
+		t.Fatalf("unmarshal error: %v", jsonErr)
+	}
+
+	if result.Capability != "overview" {
+		t.Errorf("expected capability 'overview', got %q", result.Capability)
+	}
+	if result.Name != "myapp" {
+		t.Errorf("expected name 'myapp', got %q", result.Name)
+	}
+	if result.Type != "Go" {
+		t.Errorf("expected type 'Go', got %q", result.Type)
+	}
+	if result.FileCount != 42 {
+		t.Errorf("expected file_count 42, got %d", result.FileCount)
+	}
+	if result.DirectoryCount != 14 {
+		t.Errorf("expected directory_count 14, got %d", result.DirectoryCount)
+	}
+	if len(result.Languages) != 3 {
+		t.Fatalf("expected 3 languages, got %d", len(result.Languages))
+	}
+}
