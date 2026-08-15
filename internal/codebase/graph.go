@@ -1,6 +1,6 @@
 package codebase
 
-import "pulse/internal/scanner"
+import "github.com/raghavendrashivam474/aayam/internal/scanner"
 
 // BuildCodeGraph constructs the unified CodeGraph for a project.
 //

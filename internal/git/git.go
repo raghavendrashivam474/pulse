@@ -1,8 +1,8 @@
-// Package git provides Git repository intelligence for Pulse.
+// Package git provides Git repository intelligence for Aryntra Aayam.
 //
 // All Git operations are centralized here. No other package should
 // invoke git commands directly. Callers receive typed results and
-// Pulse-native errors -- never raw exec errors.
+// Aryntra Aayam-native errors -- never raw exec errors.
 package git
 
 import (
@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	pulseErrors "pulse/internal/errors"
+	aayamErrors "github.com/raghavendrashivam474/aayam/internal/errors"
 )
 
 // WorkingTreeState describes whether the repository working tree is
@@ -133,7 +133,7 @@ func run(dir string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		return "", pulseErrors.Environment(
+		return "", aayamErrors.Environment(
 			"git command failed: git "+strings.Join(args, " "),
 			err,
 		)
@@ -197,7 +197,7 @@ func commitHistory(root string) (CommitHistory, error) {
 
 	count, err := strconv.Atoi(countOut)
 	if err != nil {
-		return CommitHistory{}, pulseErrors.Environment(
+		return CommitHistory{}, aayamErrors.Environment(
 			fmt.Sprintf("could not parse commit count %q", countOut),
 			err,
 		)
@@ -220,7 +220,7 @@ func commitHistory(root string) (CommitHistory, error) {
 
 	parts := strings.Split(logOut, sep)
 	if len(parts) != 4 {
-		return CommitHistory{}, pulseErrors.Environment(
+		return CommitHistory{}, aayamErrors.Environment(
 			fmt.Sprintf("unexpected git log output: %q", logOut),
 			nil,
 		)
@@ -228,7 +228,7 @@ func commitHistory(root string) (CommitHistory, error) {
 
 	unixSec, err := strconv.ParseInt(strings.TrimSpace(parts[3]), 10, 64)
 	if err != nil {
-		return CommitHistory{}, pulseErrors.Environment(
+		return CommitHistory{}, aayamErrors.Environment(
 			fmt.Sprintf("could not parse commit timestamp %q", parts[3]),
 			err,
 		)

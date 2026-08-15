@@ -1,13 +1,13 @@
-// Package cli handles argument parsing and application flow for Pulse.
+// Package cli handles argument parsing and application flow for Aryntra Aayam.
 package cli
 
 import (
 	"os"
 
-	"pulse/internal/config"
-	pulseErrors "pulse/internal/errors"
-	"pulse/internal/output"
-	"pulse/internal/snapshot"
+	"github.com/raghavendrashivam474/aayam/internal/config"
+	aayamErrors "github.com/raghavendrashivam474/aayam/internal/errors"
+	"github.com/raghavendrashivam474/aayam/internal/output"
+	"github.com/raghavendrashivam474/aayam/internal/snapshot"
 )
 
 // ExitSuccess is the process exit code for a successful run.
@@ -39,11 +39,11 @@ func ParseArgs(args []string) (*Args, error) {
 			parsed.JSON = true
 		default:
 			if len(args[i]) > 0 && args[i][0] == '-' {
-				return nil, pulseErrors.User("unknown flag: " + args[i])
+				return nil, aayamErrors.User("unknown flag: " + args[i])
 			}
 			positional++
 			if positional > 1 {
-				return nil, pulseErrors.User("too many arguments: only one target path is allowed")
+				return nil, aayamErrors.User("too many arguments: only one target path is allowed")
 			}
 			parsed.TargetPath = args[i]
 		}
@@ -52,7 +52,7 @@ func ParseArgs(args []string) (*Args, error) {
 	return parsed, nil
 }
 
-// Run is the main entry point for the Pulse CLI.
+// Run is the main entry point for the Aryntra Aayam CLI.
 // It returns a process exit code.
 //
 // When a target path is provided:

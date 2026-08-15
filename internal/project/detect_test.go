@@ -3,9 +3,9 @@ package project_test
 import (
 	"testing"
 
-	"pulse/internal/project"
-	"pulse/internal/scanner"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 // scanDir scans a temp project and returns the inventory.

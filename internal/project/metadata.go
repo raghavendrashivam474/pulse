@@ -3,7 +3,7 @@ package project
 import (
 	"path/filepath"
 
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // Metadata holds the basic identity and structural facts about a project.

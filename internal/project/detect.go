@@ -1,7 +1,7 @@
 package project
 
 import (
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // ProjectType represents the detected primary ecosystem of a project.

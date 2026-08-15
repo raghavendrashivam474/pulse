@@ -3,9 +3,9 @@ package project_test
 import (
 	"testing"
 
-	"pulse/internal/project"
-	"pulse/internal/scanner"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 // fixture builds a small deterministic project and returns its inventory.
@@ -49,7 +49,7 @@ func TestNewMetadata_Name(t *testing.T) {
 	root, detection, inv := buildBasicFixture(t)
 	meta := project.NewMetadata(root, detection, inv)
 
-	// TempProject dirs look like: pulse-test-1234567890
+	// TempProject dirs look like: Aryntra Aayam-test-1234567890
 	// We just verify it is non-empty and matches filepath.Base(root).
 	if meta.Name == "" {
 		t.Error("Name must not be empty")

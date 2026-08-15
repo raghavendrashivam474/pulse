@@ -3,9 +3,9 @@ package snapshot_test
 import (
 	"testing"
 
-	"pulse/internal/project"
-	"pulse/internal/snapshot"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/snapshot"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 func assertLanguages(t *testing.T, got []project.Language, want []project.Language) {
@@ -160,8 +160,8 @@ func TestDiscover_GoFixture_BoundedToTarget(t *testing.T) {
 		project.LangPowerShell,
 	})
 
-	if snap.Name == "pulse" {
-		t.Fatal("ancestor trap: got pulse instead of go-project")
+	if snap.Name == "Aryntra Aayam" {
+		t.Fatal("ancestor trap: got Aryntra Aayam instead of go-project")
 	}
 }
 
@@ -185,8 +185,8 @@ func TestDiscover_MixedFixture_BoundedToTarget(t *testing.T) {
 		project.LangPython,
 	})
 
-	if snap.Name == "pulse" {
-		t.Fatal("ancestor trap: got pulse instead of mixed-project")
+	if snap.Name == "Aryntra Aayam" {
+		t.Fatal("ancestor trap: got Aryntra Aayam instead of mixed-project")
 	}
 }
 
@@ -226,7 +226,7 @@ func TestDiscover_UnknownFixture_BoundedToTarget(t *testing.T) {
 	testhelpers.AssertEqual(t, 0, snap.DirectoryCount)
 	testhelpers.AssertEqual(t, 0, len(snap.Languages))
 
-	if snap.Name == "pulse" {
-		t.Fatal("ancestor trap: got pulse instead of unknown-project")
+	if snap.Name == "Aryntra Aayam" {
+		t.Fatal("ancestor trap: got Aryntra Aayam instead of unknown-project")
 	}
 }

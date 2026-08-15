@@ -1,4 +1,4 @@
-// Package config defines the runtime configuration for a Pulse execution.
+// Package config defines the runtime configuration for a Aryntra Aayam execution.
 package config
 
 import (
@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 )
 
-// Config holds the resolved runtime configuration for a single Pulse run.
+// Config holds the resolved runtime configuration for a single Aryntra Aayam run.
 type Config struct {
 	// TargetPath is the absolute, cleaned path to the project being analysed.
 	TargetPath string

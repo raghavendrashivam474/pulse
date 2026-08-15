@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // DependencyType classifies the kind of relationship between two packages.
@@ -57,7 +57,7 @@ func DiscoverDependencies(root string, inv scanner.Inventory, packages []Package
 	}
 
 	// Build a lookup from import path suffix → package name.
-	// For example: "pulse/internal/cli" → "cli"
+	// For example: "github.com/raghavendrashivam474/aayam/internal/cli" → "cli"
 	// The suffix is the part after the module path.
 	importToPackage := buildImportLookup(modulePath, packages)
 
@@ -139,12 +139,12 @@ func DiscoverDependencies(root string, inv scanner.Inventory, packages []Package
 
 // buildImportLookup creates a map from full Go import path to package name.
 //
-// For example, given module "pulse" and a package with Path "internal/cli"
+// For example, given module "Aryntra Aayam" and a package with Path "internal/cli"
 // and Name "cli", the entry is:
 //
-//	"pulse/internal/cli" → "cli"
+//	"github.com/raghavendrashivam474/aayam/internal/cli" → "cli"
 //
-// Root-level packages (Path "") map to: "pulse" → "main"
+// Root-level packages (Path "") map to: "Aryntra Aayam" → "main"
 func buildImportLookup(modulePath string, packages []Package) map[string]string {
 	lookup := make(map[string]string)
 

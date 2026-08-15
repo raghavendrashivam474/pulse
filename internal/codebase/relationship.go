@@ -4,7 +4,7 @@ import "sort"
 
 // NodeKind identifies the type of entity a Node represents in the code graph.
 //
-// The vocabulary is deliberately small. Only kinds that Pulse can actually
+// The vocabulary is deliberately small. Only kinds that Aryntra Aayam can actually
 // discover and prove are defined here.
 type NodeKind string
 

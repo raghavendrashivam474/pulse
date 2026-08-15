@@ -1,6 +1,6 @@
 package main
 
-import "pulse/internal/cli"
+import "github.com/raghavendrashivam474/aayam/internal/cli"
 
 // version is set at build time via:
 //

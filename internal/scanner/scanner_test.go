@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"pulse/internal/scanner"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 func TestScan_EmptyProject(t *testing.T) {

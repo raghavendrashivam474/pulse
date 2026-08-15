@@ -1,5 +1,5 @@
-﻿# build.ps1
-# Pulse build script — produces cross-platform release binaries.
+# build.ps1
+# Aryntra Aayam build script — produces cross-platform release binaries.
 #
 # Usage:
 #   .\build.ps1              # build all targets
@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$Module   = "pulse"
+$Module   = "aayam"
 $OutDir   = "dist"
 $LdFlags  = "-s -w -X main.version=$Version"
 
@@ -21,7 +21,7 @@ $Targets = @(
     @{ OS = "darwin";  Arch = "arm64"; Ext = ""     }
 )
 
-Write-Host "Pulse Build Script" -ForegroundColor Cyan
+Write-Host "Aryntra Aayam build script" -ForegroundColor Cyan
 Write-Host "Version : $Version"
 Write-Host "Output  : $OutDir"
 Write-Host ""

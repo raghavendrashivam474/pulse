@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"pulse/internal/config"
+	"github.com/raghavendrashivam474/aayam/internal/config"
 )
 
 func TestNew_EmptyPath_UsesCWD(t *testing.T) {

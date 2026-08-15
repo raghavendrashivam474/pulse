@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"pulse/internal/codebase"
+	"github.com/raghavendrashivam474/aayam/internal/codebase"
 )
 
 // ---------------------------------------------------------------------------
