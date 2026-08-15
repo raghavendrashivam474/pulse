@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"pulse/internal/output"
-	"pulse/internal/project"
-	"pulse/internal/snapshot"
+	"github.com/raghavendrashivam474/aayam/internal/output"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/snapshot"
 )
 
 func newTestWriter() (*output.Writer, *bytes.Buffer, *bytes.Buffer) {
@@ -25,7 +25,7 @@ func TestPrintVersion(t *testing.T) {
 	w, stdout, _ := newTestWriter()
 	w.PrintVersion()
 	got := stdout.String()
-	if !strings.Contains(got, "Pulse v") {
+	if !strings.Contains(got, "Aryntra Aayam v") {
 		t.Errorf("expected version string, got: %q", got)
 	}
 	if !strings.Contains(got, "1.0.0") {
@@ -55,8 +55,8 @@ func TestPrintSummary(t *testing.T) {
 	w, stdout, _ := newTestWriter()
 	w.PrintSummary()
 	got := stdout.String()
-	if !strings.Contains(got, "Pulse v") {
-		t.Errorf("expected Pulse header in summary, got: %q", got)
+	if !strings.Contains(got, "Aryntra Aayam v") {
+		t.Errorf("expected Aryntra Aayam header in summary, got: %q", got)
 	}
 	if !strings.Contains(got, "No project analysis available yet.") {
 		t.Errorf("expected placeholder message, got: %q", got)
@@ -208,8 +208,8 @@ func TestPrintDiscoveryJSON_ExpectedFields(t *testing.T) {
 		t.Fatalf("unmarshal error: %v", jsonErr)
 	}
 
-	if result.Application != "Pulse" {
-		t.Errorf("expected application Pulse, got %q", result.Application)
+	if result.Application != "Aryntra Aayam" {
+		t.Errorf("expected application Aryntra Aayam, got %q", result.Application)
 	}
 	if result.Version != "1.0.0" {
 		t.Errorf("expected version 1.0.0, got %q", result.Version)

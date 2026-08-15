@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
-	"pulse/internal/codebase"
-	"pulse/internal/scanner"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/codebase"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 // ---------------------------------------------------------------------------

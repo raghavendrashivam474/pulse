@@ -1,4 +1,4 @@
-// Package testhelpers provides shared utilities for Pulse tests.
+// Package testhelpers provides shared utilities for Aryntra Aayam tests.
 package testhelpers
 
 import (
@@ -12,7 +12,7 @@ import (
 func TempProject(t *testing.T, files map[string]string) string {
 	t.Helper()
 
-	dir, err := os.MkdirTemp("", "pulse-test-*")
+	dir, err := os.MkdirTemp("", "Aryntra Aayam-test-*")
 	if err != nil {
 		t.Fatalf("testhelpers.TempProject: could not create temp dir: %v", err)
 	}

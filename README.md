@@ -1,37 +1,37 @@
-# Pulse
+# Aryntra Aayam
 
-Pulse is a project-awareness CLI for software developers.
+Aryntra Aayam is a project-awareness CLI for software developers.
 
 ## Current Version
 
-v1.0.0 — Sprint 1: Foundation
+v1.0.0 ï¿½ Sprint 1: Foundation
 
-## What Pulse Is
+## What Aryntra Aayam is
 
-Pulse is being developed as a developer utility to help quickly understand
+Aryntra Aayam is being developed as a developer utility to help quickly understand
 the current state of a software project.
 
 ## Current Status
 
-Sprint 1 — Foundation.
+Sprint 1 ï¿½ Foundation.
 
 The CLI is operational. Project analysis will be introduced in Sprint 2.
 
 ## Build
 
 ```bash
-go build -o pulse .
+go build -o aayam .
 Run
 Bash
 
 go run .
-pulse
-pulse --help
-pulse --version
+aayam
+aayam --help
+aayam --version
 Project Structure
 text
 
-pulse/
+aayam/
 +-- main.go
 +-- go.mod
 +-- internal/

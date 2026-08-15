@@ -1,7 +1,7 @@
 package codebase
 
 import (
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // Codebase is the complete structural model of a project's source code.

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	pulseErrors "pulse/internal/errors"
+	aayamErrors "github.com/raghavendrashivam474/aayam/internal/errors"
 )
 
 // Target represents a validated analysis target.
@@ -30,25 +30,25 @@ type Target struct {
 // ResolveTarget adds semantic validation on top.
 func ResolveTarget(path string) (Target, error) {
 	if path == "" {
-		return Target{}, pulseErrors.User("target path must not be empty")
+		return Target{}, aayamErrors.User("target path must not be empty")
 	}
 
 	info, statErr := os.Stat(path)
 	if statErr != nil {
 		if os.IsNotExist(statErr) {
-			return Target{}, pulseErrors.User(
+			return Target{}, aayamErrors.User(
 				fmt.Sprintf("target path does not exist: %s", path),
 			)
 		}
 
-		return Target{}, pulseErrors.Environment(
+		return Target{}, aayamErrors.Environment(
 			fmt.Sprintf("target path cannot be accessed: %s", path),
 			statErr,
 		)
 	}
 
 	if !info.IsDir() {
-		return Target{}, pulseErrors.User(
+		return Target{}, aayamErrors.User(
 			fmt.Sprintf("target must be a directory, not a file: %s", path),
 		)
 	}

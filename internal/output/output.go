@@ -1,4 +1,4 @@
-// Package output handles all user-facing rendering for Pulse.
+// Package output handles all user-facing rendering for Aryntra Aayam.
 //
 // Normal output goes to stdout.
 // Errors and diagnostics go to stderr.
@@ -12,14 +12,14 @@ import (
 	"io"
 	"os"
 
-	"pulse/internal/codebase"
-	"pulse/internal/git"
-	"pulse/internal/snapshot"
+	"github.com/raghavendrashivam474/aayam/internal/codebase"
+	"github.com/raghavendrashivam474/aayam/internal/git"
+	"github.com/raghavendrashivam474/aayam/internal/snapshot"
 )
 
 const version = "1.0.0"
 
-// Writer holds the output destinations for Pulse.
+// Writer holds the output destinations for Aryntra Aayam.
 type Writer struct {
 	Out io.Writer
 	Err io.Writer
@@ -33,26 +33,26 @@ func Default() *Writer {
 	}
 }
 
-// PrintVersion writes the Pulse version to stdout.
+// PrintVersion writes the Aryntra Aayam version to stdout.
 func (w *Writer) PrintVersion() {
-	fmt.Fprintf(w.Out, "Pulse v%s\n", version)
+	fmt.Fprintf(w.Out, "Aryntra Aayam v%s\n", version)
 }
 
 // PrintHelp writes usage information to stdout.
 func (w *Writer) PrintHelp() {
-	fmt.Fprintf(w.Out, "Pulse v%s\n\n", version)
+	fmt.Fprintf(w.Out, "Aryntra Aayam v%s\n\n", version)
 	fmt.Fprintf(w.Out, "Project intelligence for developers.\n\n")
 	fmt.Fprintf(w.Out, "Usage:\n")
-	fmt.Fprintf(w.Out, "  pulse [path] [flags]\n\n")
+	fmt.Fprintf(w.Out, "  Aryntra Aayam [path] [flags]\n\n")
 	fmt.Fprintf(w.Out, "Flags:\n")
 	fmt.Fprintf(w.Out, "  --help       Show this help message\n")
 	fmt.Fprintf(w.Out, "  --version    Show version information\n")
 	fmt.Fprintf(w.Out, "  --json       Output results as JSON\n")
 }
 
-// PrintSummary writes the standard human-readable Pulse summary to stdout.
+// PrintSummary writes the standard human-readable Aryntra Aayam summary to stdout.
 func (w *Writer) PrintSummary() {
-	fmt.Fprintf(w.Out, "Pulse v%s\n\n", version)
+	fmt.Fprintf(w.Out, "Aryntra Aayam v%s\n\n", version)
 	fmt.Fprintf(w.Out, "Project intelligence for developers.\n\n")
 	fmt.Fprintf(w.Out, "No project analysis available yet.\n")
 }
@@ -82,7 +82,7 @@ func (w *Writer) PrintError(message string) {
 
 // PrintDiscovery renders a ProjectSnapshot as human-readable text to stdout.
 func (w *Writer) PrintDiscovery(snap snapshot.ProjectSnapshot) {
-	fmt.Fprintf(w.Out, "Pulse v%s\n\n", version)
+	fmt.Fprintf(w.Out, "Aryntra Aayam v%s\n\n", version)
 
 	fmt.Fprintf(w.Out, "Project\n")
 	fmt.Fprintf(w.Out, "  Name: %s\n", snap.Name)
@@ -469,7 +469,7 @@ func (w *Writer) PrintDiscoveryJSON(snap snapshot.ProjectSnapshot) error {
 	}
 
 	result := JSONDiscoveryResult{
-		Application: "Pulse",
+		Application: "Aryntra Aayam",
 		Version:     version,
 		Project: JSONProjectSection{
 			Name:           snap.Name,

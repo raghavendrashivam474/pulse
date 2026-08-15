@@ -3,8 +3,8 @@ package project_test
 import (
 	"testing"
 
-	"pulse/internal/project"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 // TestDetectLanguages_SingleLanguage verifies that a project containing
@@ -103,7 +103,7 @@ func TestDetectLanguages_DeterministicOrdering(t *testing.T) {
 // are recognised correctly.
 func TestDetectLanguages_NestedFiles(t *testing.T) {
 	files := []string{
-		"cmd/pulse/main.go",
+		"cmd/Aryntra Aayam/main.go",
 		"internal/project/language.go",
 		"docs/guide.md",
 	}

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // FileNodeID returns the stable graph node ID for a file path.

@@ -29,8 +29,8 @@ import (
 	"sort"
 	"strings"
 
-	"pulse/internal/project"
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // File represents a single source artifact in the codebase.

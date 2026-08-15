@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 func TestTempProject_CreatesDirectory(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"pulse/internal/project"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 func TestResolveTarget_ValidDirectory(t *testing.T) {

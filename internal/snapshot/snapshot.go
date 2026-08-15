@@ -1,6 +1,6 @@
 // Package snapshot provides the unified project state representation.
 //
-// A ProjectSnapshot captures everything Pulse has discovered about a
+// A ProjectSnapshot captures everything Aryntra Aayam has discovered about a
 // project in a single, immutable, deterministic value. Downstream
 // consumers (terminal output, JSON output, future engines) read from
 // the snapshot rather than re-running discovery.
@@ -9,10 +9,10 @@
 package snapshot
 
 import (
-	"pulse/internal/codebase"
-	"pulse/internal/git"
-	"pulse/internal/project"
-	"pulse/internal/scanner"
+	"github.com/raghavendrashivam474/aayam/internal/codebase"
+	"github.com/raghavendrashivam474/aayam/internal/git"
+	"github.com/raghavendrashivam474/aayam/internal/project"
+	"github.com/raghavendrashivam474/aayam/internal/scanner"
 )
 
 // ProjectSnapshot is the canonical representation of discovered project state.

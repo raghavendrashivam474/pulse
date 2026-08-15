@@ -4,8 +4,8 @@ import (
 	"os"
 	"testing"
 
-	"pulse/internal/cli"
-	"pulse/internal/testhelpers"
+	"github.com/raghavendrashivam474/aayam/internal/cli"
+	"github.com/raghavendrashivam474/aayam/internal/testhelpers"
 )
 
 func TestParseArgs_Empty(t *testing.T) {

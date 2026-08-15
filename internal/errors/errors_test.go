@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	pulseErrors "pulse/internal/errors"
+	aayamErrors "github.com/raghavendrashivam474/aayam/internal/errors"
 )
 
 func TestUserError(t *testing.T) {
-	err := pulseErrors.User("invalid path supplied")
+	err := aayamErrors.User("invalid path supplied")
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	if err.Kind != pulseErrors.KindUser {
+	if err.Kind != aayamErrors.KindUser {
 		t.Errorf("expected KindUser, got %v", err.Kind)
 	}
 	if err.Error() != "invalid path supplied" {
@@ -22,8 +22,8 @@ func TestUserError(t *testing.T) {
 
 func TestUserWrapError(t *testing.T) {
 	cause := fmt.Errorf("no such file or directory")
-	err := pulseErrors.UserWrap("target path does not exist: ./missing", cause)
-	if err.Kind != pulseErrors.KindUser {
+	err := aayamErrors.UserWrap("target path does not exist: ./missing", cause)
+	if err.Kind != aayamErrors.KindUser {
 		t.Errorf("expected KindUser, got %v", err.Kind)
 	}
 	if err.Unwrap() != cause {
@@ -37,8 +37,8 @@ func TestUserWrapError(t *testing.T) {
 
 func TestEnvironmentError(t *testing.T) {
 	cause := fmt.Errorf("permission denied")
-	err := pulseErrors.Environment("cannot read project directory", cause)
-	if err.Kind != pulseErrors.KindEnvironment {
+	err := aayamErrors.Environment("cannot read project directory", cause)
+	if err.Kind != aayamErrors.KindEnvironment {
 		t.Errorf("expected KindEnvironment, got %v", err.Kind)
 	}
 	if err.Unwrap() != cause {
@@ -48,8 +48,8 @@ func TestEnvironmentError(t *testing.T) {
 
 func TestInternalError(t *testing.T) {
 	cause := fmt.Errorf("unexpected nil state")
-	err := pulseErrors.Internal("snapshot construction failed", cause)
-	if err.Kind != pulseErrors.KindInternal {
+	err := aayamErrors.Internal("snapshot construction failed", cause)
+	if err.Kind != aayamErrors.KindInternal {
 		t.Errorf("expected KindInternal, got %v", err.Kind)
 	}
 	if err.Unwrap() != cause {
@@ -58,7 +58,7 @@ func TestInternalError(t *testing.T) {
 }
 
 func TestErrorWithoutCause(t *testing.T) {
-	err := pulseErrors.User("too many arguments")
+	err := aayamErrors.User("too many arguments")
 	if err.Unwrap() != nil {
 		t.Error("expected nil cause for error constructed without cause")
 	}
